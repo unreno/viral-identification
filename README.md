@@ -218,7 +218,7 @@ If you weren't paying attention when you created it, you can get it with the fol
 ```BASH
 aws ecr describe-repositories | jq -r '.repositories | map(select( .repositoryName == "viral_identification" ).repositoryUri )[]'
 
-XXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification:latest
+XXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification
 ```
 
 
@@ -227,11 +227,13 @@ Be sure to use the added --no-include-email option as without it the output will
 
 
 ```BASH
+ecr_repo=$( aws ecr describe-repositories | jq -r '.repositories | map(select( .repositoryName == "viral_identification" ).repositoryUri )[]' )
+
 aws ecr get-login --no-include-email --region us-east-1 | bash
 
-docker tag viral_identification:latest XXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification:latest
+docker tag viral_identification:latest ${ecr_repo}:latest
 
-docker push XXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification:latest
+docker push ${ecr_repo}:latest
 ```
 
 
@@ -240,6 +242,16 @@ docker push XXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification:late
 
 
 #	AWS Preparation
+
+
+
+Your AWS Account ID ...
+```BASH
+aws sts get-caller-identity | jq -r '.Account'
+```
+
+
+
 
 
 
@@ -420,6 +432,9 @@ AWS_BATCH_JOB_ARRAY_INDEX=0
 
 the array index starts at 0
 
+can also override the docker image
+
+
 
 
 
@@ -542,6 +557,11 @@ https://keithmsharp.wordpress.com/2016/11/15/building-a-vpc-with-aws-cloudformat
 
 
 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-computeenvironment-computeresources.html#cfn-batch-computeenvironment-computeresources-instancerole
+
+
+
+https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html
+
 
 
 
