@@ -498,6 +498,25 @@ docker exec -it 235487af1717 /bin/bash
 
 
 
+
+#	Total time
+
+I processed the 7th largest file in 13 hours.
+31468335171 data/HG00251/sequence_read/ERR018427_2.filt.fastq.gz
+
+31468335171 bases / 13 hours
+2420641167 bases / hour
+
+awk '{s+=$1}END{print s}' 1kg.files
+71033560137387 total bases
+71033560137387 bases / 2420641167(bases/hour)
+29344.94 hours
+
+Approximately 30,000 hours.
+
+
+
+
 #	AWS Questions
 
 ##	What happens if spot instance going to be killed? how to react?
