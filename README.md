@@ -10,7 +10,9 @@ Thorough, unique and unambiguous identification of viral content in a genomic sa
 
 
 What is the most appropriate viral reference?
+
 RefSeq only has about 12,000 sequences.
+
 NCBI's nt has nearly 3 million.
 
 Why the huge difference?
@@ -144,9 +146,13 @@ When using AWS Batch, the job command cannot include the use of pipes as they wi
 This basically means that your job will probably need a script.
 
 Don't even need a script
+
 Actually, kinda do NEED a script. The command converts pipes to strings.
+
 But don't need a complex script. Processing is a series of pipes from S3(or ftp) to S3.
+
 I don't think that including pipes in the command is acceptable.
+
 They just get converted to strings and then passed as params to the first command.
 
 viral_identification.bash
@@ -160,13 +166,10 @@ array_handler.bash
 #	Docker Image Creation and Storage
 
 
+Create a Dockerfile defining the contents of your environment.
+
 Create a Docker image containing anything needed by any of your job scripts.
 
-Add blastn executable
-ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.9.0/ncbi-blast-2.9.0+-x64-linux.tar.gz
-Add blastn masked viral reference
-viral.masked.gz
-Add script
 
 
 ```BASH
@@ -191,6 +194,7 @@ docker run --rm --entrypoint "/bin/bash" -it viral_identification
 ##	Create an ECR Repository
 
 Strongly advised to use the Amazon Elastic Container Registry (ECR) to store your docker image.
+
 I imagine that you can store it elsewhere but that is outside the focus of this project.
 
 
@@ -224,6 +228,8 @@ XXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification
 
 Login, tag the image and push it to the repository.
 Be sure to use the added --no-include-email option as without it the output will include deprecated "-e none"
+
+For privacy, I used a command to set my Account ID / ECR repository.
 
 
 ```BASH
@@ -393,14 +399,14 @@ Stuck in a "loop".
 Something like.
 
 ```BASH
-aws batch submit-job --job-name testing4 --job-definition JobDefinition --job-queue JobQueue --container-overrides '{ "command": ["echo","testing","command","line"]}'
+aws batch submit-job --job-name testing4 --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '{ "command": ["echo","testing","command","line"]}'
 
-aws batch submit-job --job-name TESTING1 --job-definition JobDefinition --job-queue JobQueue --container-overrides command="echo testing command line"   NOPE
+aws batch submit-job --job-name TESTING1 --job-definition myJobDefinition --job-queue myJobQueue --container-overrides command="echo testing command line"   NOPE
 
-aws batch submit-job --job-name s3___1000genomes_phase3_data_HG01863_sequence_read_SRR395998_1_filt_fastq_gz --job-definition JobDefinition --job-queue JobQueue --container-overrides { "command": ["viral_identification.bash","s3://1000genomes/phase3/data/HG01863/sequence_read/SRR395998_1.filt.fastq.gz"]}
+aws batch submit-job --job-name s3___1000genomes_phase3_data_HG01863_sequence_read_SRR395998_1_filt_fastq_gz --job-definition myJobDefinition --job-queue myJobQueue --container-overrides { "command": ["viral_identification.bash","s3://1000genomes/phase3/data/HG01863/sequence_read/SRR395998_1.filt.fastq.gz"]}
 
 
-aws batch submit-job --job-name ftp___ftp_sra_ebi_ac_uk_vol1_fastq_ERR188_ERR188022_ERR188022_1_fastq_gz --job-definition JobDefinition --job-queue JobQueue --container-overrides { "command": ["viral_identification.bash","ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR188/ERR188022/ERR188022_1.fastq.gz"]}
+aws batch submit-job --job-name ftp___ftp_sra_ebi_ac_uk_vol1_fastq_ERR188_ERR188022_ERR188022_1_fastq_gz --job-definition myJobDefinition --job-queue myJobQueue --container-overrides { "command": ["viral_identification.bash","ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR188/ERR188022/ERR188022_1.fastq.gz"]}
 ```
 
 
@@ -418,21 +424,41 @@ If it is the intention to submit massive numbers of jobs, the "array job" should
 https://docs.aws.amazon.com/batch/latest/userguide/array_index_example.html
 
 ```BASH
-aws batch submit-job --job-name array_test_1 --job-definition JobDefinition --job-queue JobQueue --array-properties size=5 --container-overrides '{ "command": ["array_handler.bash","1000genomes","1"]}'
+aws batch submit-job --job-name array_test_1 --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=5 --container-overrides '{ "command": ["array_handler.bash","1000genomes","1"]}'
 
-aws batch submit-job --job-name array_test_2 --job-definition JobDefinition --job-queue JobQueue --array-properties size=5 --container-overrides '{ "command": ["array_handler.bash","Other","10"]}'
+aws batch submit-job --job-name array_test_2 --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=5 --container-overrides '{ "command": ["array_handler.bash","Other","10"]}'
 
-aws batch submit-job --job-name array_test_2 --job-definition JobDefinition --job-queue JobQueue --array-properties size=5 --container-overrides '{ "command": ["array_handler.bash","Other","10"], "vcpus": 1, "memory": 100, "instanceType": "optimal" }'
+aws batch submit-job --job-name array_test_2 --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=5 --container-overrides '{ "command": ["array_handler.bash","Other","10"], "vcpus": 1, "memory": 100, "instanceType": "optimal" }'
 
-aws batch submit-job --job-name array_test_1 --job-definition JobDefinition --job-queue JobQueue --array-properties size=100 --container-overrides '{ "command": ["array_handler.bash","1000genomes","1"], "vcpus": 1, "memory": 100, "instanceType": "optimal"}'
+aws batch submit-job --job-name array_test_1 --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=100 --container-overrides '{ "command": ["array_handler.bash","1000genomes","1"], "vcpus": 1, "memory": 100, "instanceType": "optimal"}'
 ```
 
-AWS_BATCH_JOB_ARRAY_INDEX=0
-
-
-the array index starts at 0
 
 can also override the docker image
+
+
+
+SPOT Instance Requests Limit was increased from "default" to 180.
+Attempt at 100 item array job started and executed nicely this morning.
+
+
+However, the limits for Spot Instances are not raised depending upon the type of instance but the total Spot Instance limits in general. For example, in this case, I've raised the limits for c5.18xlarges Spot Instances upto 100 but you can also launch other c5 instances depending upon the size. For your convenience, I've listed the number of Spot Instances you can launch depending upon its size
+> upto 74 c5.24xlarges Spot Instances with the current Spot Instance limits
+> upto 100 c5.18xlarges Spot Instances with the current Spot Instance limits
+> upto 112 c5.16xlarges Spot Instances with the current Spot Instance limits
+> upto 150 c5.12xlarges Spot Instances with the current Spot Instance limits
+Not sure how this translates into the 180.
+
+
+8/20/2019, 12:51:31 PM	instanceChange	launched	{"instanceType":"c5.18xlarge","image":"ami-0d09143c6fc181fe3","productDescription":"Linux/UNIX","availabilityZone":"us-east-1d"}	i-0593e7f9bf14cfee1
+8/20/2019, 12:51:31 PM	instanceChange	launched	{"instanceType":"c5.18xlarge","image":"ami-0d09143c6fc181fe3","productDescription":"Linux/UNIX","availabilityZone":"us-east-1d"}	i-0ed25aae31baf8885
+8/20/2019, 12:51:31 PM	bidChange	active	BidId sir-2k384zik, PreviousState: active	
+8/20/2019, 12:51:31 PM	bidChange	active	BidId sir-49zr6mfk, PreviousState: active	
+8/20/2019, 12:51:29 PM	fleetRequestChange	progress	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1d, capacityUnitsRequested: 2.0, totalCapacityUnitsRequested: 2.0, totalCapacityUnitsFulfilled: 0.0, targetCapacity: 2	
+8/20/2019, 12:51:28 PM	fleetRequestChange	active		
+8/20/2019, 12:51:28 PM	information	launchSpecUnusable	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1e, Spot bid price is less than Spot market price $-1.0000	
+8/20/2019, 12:51:18 PM	fleetRequestChange	submitted	
+
 
 
 
@@ -444,24 +470,30 @@ can also override the docker image
 #	Job Debugging
 
 
+If you created a KeyPair and want to connect to your running instance and container,
+get the ip address from the web console or command line and `ssh` to it.
+
+Once connected, list the docker containers. There should be at least 2.
+One for the "agent" and one for each of your running containers.
+Connect to it with a `docker exec` command.
 
 ```BASH
 
-> aws ec2 describe-instances --query 'Reservations[].Instances[].PublicIpAddress' 
+aws ec2 describe-instances --query 'Reservations[].Instances[].PublicIpAddress' 
 
 [
     "3.91.106.157",
     "18.207.137.221"
 ]
 
-> ssh -i ~/.ssh/batchKeyPair -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ec2-user@PUBLIC_IP_ADDRESS
+ssh -i ~/.ssh/batchKeyPair -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ec2-user@PUBLIC_IP_ADDRESS
 
 
-> docker ps -a
+docker ps -a
+CONTAINER ID        IMAGE                  COMMAND             CREATED             STATUS              PORTS               NAMES
+235487af1717        viral_identification   "/bin/bash"         8 seconds ago       Up 7 seconds                            wonderful_fermi
 
-
-> docker exec -it CONTAINER_ID /bin/bash
-
+docker exec -it 235487af1717 /bin/bash
 ```
 
 
