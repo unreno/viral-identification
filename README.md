@@ -37,7 +37,7 @@ zcat viral*.fna.gz > viral.genomic.fa
 
 
 
-##	Viral Sequence Extraction From NCBI's nt Database
+##	Viral Sequence Extraction From NCBI's nt and nr Databases
 
 
 The complete nt database is quite large. ~100GB. Extracting just the viruses.
@@ -106,6 +106,8 @@ blastdbcmd -db nr -entry all -outfmt "%K" | sort | uniq -c
 blastdbcmd -db nr -entry all -outfmt "%K,%i" | awk -F, '( $1 == "Viruses" ){ print $2 }' > nr.viruses.seqidlist
 
 wc -l nr.viruses.seqidlist
+5694044 /raid/refs/blast/nr.viruses.seqidlist
+
 
 
 blastdbcmd -db nr -entry_batch nr.viruses.seqidlist > nr.viruses.fa
@@ -121,9 +123,22 @@ grep -c "^>" nr.viruses.fa
 
 
 
+Some of these entries have sequence names which are invalid to some software.
 
 
+The most common issue is including a greater-than symbol after the first character.
 
+
+```BASH
+> sed -e 's/<[^>]*>/_/g' viral.genomic.fa > viral.raw.fa
+
+> diff viral.genomic.fa viral.raw.fa 
+3440738c3440738
+< >NC_042059.1 Halobacterium phage phiH T4, T4', and T<down>LX1</down> genes, complete sequence; and orf75 (T<down>LX3</down>) gene, complete cds
+---
+> >NC_042059.1 Halobacterium phage phiH T4, T4', and T_LX1_ genes, complete sequence; and orf75 (T_LX3_) gene, complete cds
+
+```
 
 
 
@@ -189,6 +204,17 @@ If you added an ENTRYPOINT to your Dockerfile, you'll need to override it with s
 ```BASH
 docker run --rm --entrypoint "/bin/bash" -it viral_identification
 ```
+
+I do not use entrypoints as I feel that they limit what the container can do.
+It can't be overridden in the AWS Batch world.
+At least not as far as I have found anyway.
+
+The fetch_and_run example is built on this which is fine, but it effectively ignores the first part of the passed command.
+This would work well if you can't or don't want to edit the docker image.
+It is stuck to getting its job script from S3.
+
+
+
 
 
 ##	Create an ECR Repository
@@ -448,7 +474,8 @@ However, the limits for Spot Instances are not raised depending upon the type of
 > upto 112 c5.16xlarges Spot Instances with the current Spot Instance limits
 > upto 150 c5.12xlarges Spot Instances with the current Spot Instance limits
 Not sure how this translates into the 180.
-
+Also, given that Batch is starting these instances, the numbers are beyond my control.
+It is still unclear to me as to why it wouldn't start my SPOT instance even when I had none running.
 
 8/20/2019, 12:51:31 PM	instanceChange	launched	{"instanceType":"c5.18xlarge","image":"ami-0d09143c6fc181fe3","productDescription":"Linux/UNIX","availabilityZone":"us-east-1d"}	i-0593e7f9bf14cfee1
 8/20/2019, 12:51:31 PM	instanceChange	launched	{"instanceType":"c5.18xlarge","image":"ami-0d09143c6fc181fe3","productDescription":"Linux/UNIX","availabilityZone":"us-east-1d"}	i-0ed25aae31baf8885
