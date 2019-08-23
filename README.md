@@ -18,6 +18,7 @@ NCBI's nt has nearly 3 million.
 Why the huge difference?
 
 What about NCBI's nr?
+Contains proteins, not nucleotides, and contains nearly twice as many viruses than nt.
 
 
 ##	Viral Sequence Acquisition From NCBI RefSeq
@@ -85,42 +86,36 @@ grep -c "^>" nt.viruses.fa
 
 
 
+The "nr" database is also available.
+It contains proteins, rather than nucleotides, but it is similar.
+And it contains more than twice as many viral sequences.
+
 ```BASH
 update_blastdb.pl --decompress nr
 ...
 
-
-
-
-
-
-
 blastdbcmd -db nr -entry all -outfmt "%K" | sort | uniq -c
-6009090 Archaea
+  6009090 Archaea
 670701365 Bacteria
-65740422 Eukaryota
- 312376 N/A
-5694044 Viruses
-
+ 65740422 Eukaryota
+   312376 N/A
+  5694044 Viruses
 
 blastdbcmd -db nr -entry all -outfmt "%K,%i" | awk -F, '( $1 == "Viruses" ){ print $2 }' > nr.viruses.seqidlist
 
 wc -l nr.viruses.seqidlist
-5694044 /raid/refs/blast/nr.viruses.seqidlist
-
-
+5694044 nr.viruses.seqidlist
 
 blastdbcmd -db nr -entry_batch nr.viruses.seqidlist > nr.viruses.fa
 
 grep -c "^>" nr.viruses.fa
-
+5694044
 ```
 
 
 
 
 ##	Reference Cleanup
-
 
 
 Some of these entries have sequence names which are invalid to some software.
@@ -130,13 +125,65 @@ The most common issue is including a greater-than symbol after the first charact
 
 
 ```BASH
-> sed -e 's/<[^>]*>/_/g' viral.genomic.fa > viral.raw.fa
+sed -e 's/<[^>]*>/_/g' viral.genomic.fa > viral.raw.fa
 
-> diff viral.genomic.fa viral.raw.fa 
+diff viral.genomic.fa viral.raw.fa 
 3440738c3440738
 < >NC_042059.1 Halobacterium phage phiH T4, T4', and T<down>LX1</down> genes, complete sequence; and orf75 (T<down>LX3</down>) gene, complete cds
 ---
-> >NC_042059.1 Halobacterium phage phiH T4, T4', and T_LX1_ genes, complete sequence; and orf75 (T_LX3_) gene, complete cds
+>NC_042059.1 Halobacterium phage phiH T4, T4', and T_LX1_ genes, complete sequence; and orf75 (T_LX3_) gene, complete cds
+
+```
+
+
+##	Human Homology
+
+
+Many viruses have some sequence similarity to parts of the human genome.
+In order to minimize any mis-alignment of human sequence to the viral reference, I will mask it.
+But first, I'll chop the viral reference into smaller sequences and attempt to align them to a human reference.
+
+For this example, let's chop the reference into 100bp reads.
+`faSplit` gives us the opportunity take a 50bp sequence and then add the next 50bp as "extra".
+This overlap will result in the majority (not the first or last 50bp of each sequence) of being checked twice.
+
+
+
+
+
+```BASH
+
+faSplit size -extra=50 viral.raw.fa 50 viral.raw-100bp -oneFile
+
+
+
+
+
+grep -c "^>" viral.raw-100bp.fa
+
+
+
+
+
+bowtie2 --version
+
+
+bowtie2 -x hg38 -f -U viral.raw-100bp.fa --very-sensitive --no-unal -S viral.raw-100bp.hg38.e2e.sam
+
+
+
+
+
+
+
+samtools --version
+
+samtools view -c viral.raw-100bp.hg38.e2e.sam 
+
+
+
+
+
 
 ```
 
@@ -145,6 +192,193 @@ The most common issue is including a greater-than symbol after the first charact
 
 
 
+How to properly analyze these masked sequences?
+Does masking matter in post alignment analysis?
+
+
+
+###	RepeatMasking
+
+
+
+
+
+
+
+```BASH
+
+
+
+RepeatMasker -s -pa 40 viral.raw.fa > RepeatMasker.out
+
+
+
+
+
+head -3 RepeatMasker.out 
+RepeatMasker version open-4.0.9
+Search Engine: NCBI/RMBLAST [ 2.9.0+ ]
+Master RepeatMasker Database: /home/jake/.local/RepeatMasker-open-4-0-9-p2/Libraries/RepeatMaskerLib.embl ( Complete Database: CONS-Dfam_3.0 )
+
+
+
+
+
+
+cat RepeatMasker.out | sed 's/ in batch [[:digit:]]\+ of [[:digit:]]\+//' | sort | uniq
+
+Checking for E. coli insertion elements
+identifying ancient repeats
+identifying full-length ALUs
+identifying full-length interspersed repeats
+identifying long interspersed repeats
+identifying most interspersed repeats
+identifying remaining ALUs
+identifying retrovirus-like sequences
+identifying Simple Repeats
+
+The following E coli IS elements could not be confidently clipped out:
+  IS1#ARTEFACT in NC_005856.1frag-1: 22650 - 22848
+  IS1#ARTEFACT in NC_005856.1frag-1: 23125 - 23314
+  IS1#ARTEFACT in NC_022749.1: 35265 - 35605
+  IS1#ARTEFACT in NC_022749.1: 35731 - 35929
+  IS1#ARTEFACT in NC_042128.1frag-2: 50923 - 51121
+  IS1#ARTEFACT in NC_042128.1frag-2: 51247 - 51360
+  IS1#ARTEFACT in NC_042128.1frag-2: 51375 - 51570
+  IS5#ARTEFACT in NC_005856.1frag-1: 7667 - 8702
+  IS5#ARTEFACT in NC_042128.1frag-2: 50115 - 50731
+  IS5#ARTEFACT in NC_042128.1frag-2: 57463 - 58079
+
+
+
+
+
+
+
+
+
+
+
+faSplit size -extra=50 viral.raw.fa.masked 50 viral.masked-100bp -oneFile
+
+
+
+
+
+
+
+grep -c "^>" viral.masked-100bp.fa
+
+
+
+
+
+
+
+
+
+bowtie2 -x hg38 -f -U viral.masked-100bp.fa --very-sensitive --no-unal -S viral.masked-100bp.hg38.e2e.sam
+
+
+
+
+
+samtools view -c viral.masked-100bp.hg38.e2e.sam 
+
+
+
+
+
+
+
+
+
+
+
+
+
+samtools view viral.masked-100bp.hg38.e2e.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
+
+
+
+```
+
+
+
+
+
+
+
+Running RepeatMasker on the output of RepeatMasker masks more. Odd. Run multiple times? Acceptable practice?
+
+Running the 
+
+```BASH
+
+RepeatMasker -s -pa 40 viral.raw.fa
+RepeatMasker -s -pa 40 viral.raw.fa.masked
+RepeatMasker -s -pa 40 viral.raw.fa.masked.masked
+RepeatMasker -s -pa 40 viral.raw.fa.masked.masked.masked
+RepeatMasker -s -pa 40 viral.raw.fa.masked.masked.masked.masked
+
+
+viral.raw.fa.tbl:bases masked:    2799427 bp ( 0.89 %)
+viral.raw.fa.masked.tbl:bases masked:     150580 bp ( 0.05 %)
+viral.raw.fa.masked.masked.tbl:bases masked:       1654 bp ( 0.00 %)
+viral.raw.fa.masked.masked.masked.tbl:bases masked:        143 bp ( 0.00 %)
+No repetitive sequences were detected in viral.raw.fa.masked.masked.masked.masked
+
+
+```
+
+
+
+
+
+
+
+
+The results from RepeatMasker are not perfect, but given that the blast results include alignment locations, these regions could be ignored or removed in post alignment analysis.
+
+
+
+
+
+##	Creating blastn Reference
+
+
+```BASH
+
+makeblastdb -in viral.raw.fa -dbtype nucl -out viral.raw -title viral.raw -parse_seqids
+
+ls -1s viral.raw.n*
+ 1444 viral.raw.nhr
+  144 viral.raw.nin
+   48 viral.raw.nog
+  384 viral.raw.nsd
+   12 viral.raw.nsi
+82176 viral.raw.nsq
+
+tar cvf - viral.raw.n* | gzip > viral.raw.tar.gz
+
+
+
+
+
+
+makeblastdb -in viral.masked.fa -dbtype nucl -out viral.masked -title viral.masked -parse_seqids
+
+
+ls -1s viral.masked.n*
+
+
+
+
+
+
+tar cvf - viral.masked.n* | gzip > viral.masked.tar.gz
+
+```
 
 
 
