@@ -4,6 +4,47 @@
 Thorough, unique and unambiguous identification of viral content in a genomic sample.
 
 
+#	AWS FYI
+
+This analysis is designed to use AWS resources from the command line.
+`aws` usually requires your credentials in `~/.aws/config` and `~/.aws/credentials`.
+These can be set up using `aws configure` or simply creating and editing those files.
+
+If you have multiple sets of credentials, as I do, you will need to add `--profile` and/or `--region` options to each of these `aws` commands, otherwise they will use the default.
+
+To setup multiple credentials, you could use `aws configure` and then edit the files or simply just edit them.
+
+```BASH
+cat ~/.aws/config
+
+[default]
+output = json
+region = us-east-1
+cli_history = enable
+[profile oneofmyprofiles]
+output = json
+region = us-east-1
+[profile anotherprofile]
+output = json
+region = us-west-2
+
+cat ~/.aws/credentials
+
+[default]
+aws_access_key_id = ABCDEF
+aws_secret_access_key = GHIJKL
+[oneofmyprofiles]
+aws_access_key_id = ABCDEF
+aws_secret_access_key = GHIJKL
+[anotherprofile]
+aws_access_key_id = MNOPQR
+aws_secret_access_key = STUVWX
+```
+
+
+
+
+
 
 
 #	Reference Preparation
