@@ -89,6 +89,8 @@ grep -c "^>" nt.viruses.fa
 The "nr" database is also available.
 It contains proteins, rather than nucleotides, but it is similar.
 And it contains more than twice as many viral sequences.
+Really unclear as to why such a large difference in numbers.
+
 
 ```BASH
 update_blastdb.pl --decompress nr
@@ -114,6 +116,10 @@ grep -c "^>" nr.viruses.fa
 
 
 
+Not sure of the best reference to use, but for the moment I'm using that compiled from RefSeq.
+
+
+
 
 ##	Reference Cleanup
 
@@ -131,7 +137,7 @@ diff viral.genomic.fa viral.raw.fa
 3440738c3440738
 < >NC_042059.1 Halobacterium phage phiH T4, T4', and T<down>LX1</down> genes, complete sequence; and orf75 (T<down>LX3</down>) gene, complete cds
 ---
->NC_042059.1 Halobacterium phage phiH T4, T4', and T_LX1_ genes, complete sequence; and orf75 (T_LX3_) gene, complete cds
+> >NC_042059.1 Halobacterium phage phiH T4, T4', and T_LX1_ genes, complete sequence; and orf75 (T_LX3_) gene, complete cds
 
 ```
 
@@ -141,7 +147,7 @@ diff viral.genomic.fa viral.raw.fa
 
 Many viruses have some sequence similarity to parts of the human genome.
 In order to minimize any mis-alignment of human sequence to the viral reference, I will mask it.
-But first, I'll chop the viral reference into smaller sequences and attempt to align them to a human reference.
+But first, I'll check the homology by chopping the viral reference into smaller sequences and attempt to align them to a human reference.
 
 For this example, let's chop the reference into 100bp reads.
 `faSplit` gives us the opportunity take a 50bp sequence and then add the next 50bp as "extra".
@@ -154,37 +160,74 @@ This overlap will result in the majority (not the first or last 50bp of each seq
 ```BASH
 
 faSplit size -extra=50 viral.raw.fa 50 viral.raw-100bp -oneFile
-
-
-
-
+6256732 pieces of 6257355 written
 
 grep -c "^>" viral.raw-100bp.fa
-
-
-
-
+6256732
 
 bowtie2 --version
 
+/usr/local/bin/bowtie2-align-s version 2.3.4.1
+64-bit
+Built on system76-server
+Tue Apr 17 15:46:04 MDT 2018
+Compiler: gcc version 5.4.0 20160609 (Ubuntu 5.4.0-6ubuntu1~16.04.9) 
+Options: -O3 -m64 -msse2 -funroll-loops -g3 -std=c++98 -DPOPCNT_CAPABILITY -DWITH_TBB -DNO_SPINLOCK -DWITH_QUEUELOCK=1
+Sizeof {int, long, long long, void*, size_t, off_t}: {4, 8, 8, 8, 8, 8}
+
 
 bowtie2 -x hg38 -f -U viral.raw-100bp.fa --very-sensitive --no-unal -S viral.raw-100bp.hg38.e2e.sam
+6256732 reads; of these:
+  6256732 (100.00%) were unpaired; of these:
+    6256188 (99.99%) aligned 0 times
+    73 (0.00%) aligned exactly 1 time
+    471 (0.01%) aligned >1 times
+0.01% overall alignment rate
 
 
-
-
-
+bowtie2 -x hg38 -f -U viral.raw-100bp.fa --very-sensitive-local --no-unal -S viral.raw-100bp.hg38.loc.sam
+6256732 reads; of these:
+  6256732 (100.00%) were unpaired; of these:
+    6246279 (99.83%) aligned 0 times
+    3311 (0.05%) aligned exactly 1 time
+    7142 (0.11%) aligned >1 times
+0.17% overall alignment rate
 
 
 samtools --version
+samtools 1.8
+Using htslib 1.8
+Copyright (C) 2018 Genome Research Ltd.
 
 samtools view -c viral.raw-100bp.hg38.e2e.sam 
+544
 
+samtools view -c viral.raw-100bp.hg38.loc.sam 
+10453
 
+samtools view viral.raw-100bp.hg38.e2e.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
+      2 TGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTG
+      3 CCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCT
+      3 CTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAA
+      3 GTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTA
+      4 GGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTT
+      6 GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+      6 GTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGT
+      7 TAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAAC
+     10 ACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCC
+     10 CCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTA
 
-
-
-
+samtools view viral.raw-100bp.hg38.loc.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
+      3 CCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCT
+      3 CTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAA
+      3 GTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTA
+      3 TTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTATTAT
+      4 GGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTT
+      6 GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+      6 GTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGTGT
+      7 TAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAAC
+     10 ACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCC
+     10 CCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTA
 ```
 
 
@@ -260,47 +303,59 @@ The following E coli IS elements could not be confidently clipped out:
 
 
 faSplit size -extra=50 viral.raw.fa.masked 50 viral.masked-100bp -oneFile
-
-
-
-
-
-
+6224051 pieces of 6257355 written
 
 grep -c "^>" viral.masked-100bp.fa
-
-
-
-
-
-
-
+6224051
 
 
 bowtie2 -x hg38 -f -U viral.masked-100bp.fa --very-sensitive --no-unal -S viral.masked-100bp.hg38.e2e.sam
+6224051 reads; of these:
+  6224051 (100.00%) were unpaired; of these:
+    6223929 (100.00%) aligned 0 times
+    62 (0.00%) aligned exactly 1 time
+    60 (0.00%) aligned >1 times
+0.00% overall alignment rate
 
-
-
+bowtie2 -x hg38 -f -U viral.masked-100bp.fa --very-sensitive-local --no-unal -S viral.masked-100bp.hg38.loc.sam
+6224051 reads; of these:
+  6224051 (100.00%) were unpaired; of these:
+    6221488 (99.96%) aligned 0 times
+    1494 (0.02%) aligned exactly 1 time
+    1069 (0.02%) aligned >1 times
+0.04% overall alignment rate
 
 
 samtools view -c viral.masked-100bp.hg38.e2e.sam 
+122
 
-
-
-
-
-
-
-
-
-
-
+samtools view -c viral.masked-100bp.hg38.loc.sam 
+2563
 
 
 samtools view viral.masked-100bp.hg38.e2e.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
+      1 TGGATCGGGAAACTGGTTCTATCAAGGTTGTAGTGTCCAAATAGTGTATTTTGTAGAATTCCAGTAAAGATGGCAAAGAATCAAACACCTGGTCACCTAT
+      1 TGGCACAACCATCTGAATCCAGAAGTGAAGAAAACCTCCTGGACAGAAGAGGAAGATAGAATTATTTACCAGGCACACAAGAGACTGGGAAACAGATGGG
+      1 TGGCGGAAGGACCCTGAGGAGCGGCCCACTTTTGAGTACCTGCAGGCCTTCCTGGAGGACTACTTCACCTCGACAGAGCCCCCAGTACCAGCCTGGAGAG
+      1 TGGCTCGCTGCTCCTGGGAAGTCCCCGGGCTTCGGGTCACAGCCCGTGCAGCTGCCACTATCTCACACTTGCATGCCAGGTGGTCCTCCAGCGTCACCGT
+      1 TTCCATCCATCAGCGCAAAGTAGGTGATTTTGAGGCCCAACATGCTTGACTCTGCCCAAAAGTCACCTTCCTCAGCAGGATGCAGCCTATTACACTCAGC
+      1 TTGCAACAGCCGGAGCAGCGCTGCACCTCCACGCAGGGCGGCCACACCAGGAAGTTGGCATTGGTGCGGTCGATGAGGCGCCGGGAGATCTCGAACACCT
+      1 TTTTAACCAGTGAAATTGACCTGCCCGTGAAGAGGCGGGCATGACACAGCAAGACGAGAAGACCCTATGGAGCTTTAATTTATTAATGCAAACAGTACCT
+      2 CCAACCCTAACCCTAACCCTAGCTCTAAGCCTAACCCCAACCCTAACCCTAACCCTAGCTCTAAGCCTAACCCCAACCCTAACCCTAACCCTAGCTCTAA
+      2 TAACCCTAACCCTAACCCTAAGTCTAACCCTAACCCTAAGTCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTGACCCTAACCCTAGCTCTAAC
+      2 TAGGGTTAGACTTAGGGTTAGGGTTAGACTTAGGGTTAGGGTTAGGGTTAGACCTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGG
 
-
-
+samtools view viral.masked-100bp.hg38.loc.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
+      2 GTTAGAGCTAGGGTTAGGGTCAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGACTTAGGGTTAGGGTTAGACTTAGGGTTAGGGTTAGGGTTA
+      2 GTTTAAAATTTTGTCCAACGTTCCTTTAGGTACACCAGACTTCTCGGATAATTGTTTTGAAGTAAATCCTTTTTCTTTTTTTAATTTTTCTATTATTTCC
+      2 TAAGTCCTCATCCAATTTATAAAAAATATTTGAATTGTTTAATTTAATTATTAATATACTTTTTTCTTTTTCTGTTAAATTAGAATTTTCTAAAATTGTA
+      2 TAATATCTCTTAATAATTCTTTAGAGCCAATATCTACAATATTTTTATTATTTATTTTTAAATATACTCTTTCTTCACCTATAAATATACTATTTCTATT
+      2 TAGCTCTAACCCTAGCCCTAACCCTAACCCTAGCTCTAACCCTAGCCCTAACCCTAACCCTAGCTCTAACCCTAGCCCTAACCCTAACCCTAGCTCTAAC
+      2 TAGGGTTAGACTTAGGGTTAGGGTTAGACTTAGGGTTAGGGTTAGGGTTAGACCTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGG
+      2 TCATCAGACTTCTCCGTTTTTTCTTCTTTGCTGTCTTCTTCTTCTTTCTTGTCTTTCTTGTCTTTCTTACCTTTTTTGTTCTCGTCTTCTTCACTGTCTT
+      2 TCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTC
+      2 TTATTAGATATAGCTTCGTGGATATCTATTGAATTTTATAATAAATGTTATAATATAATAGAAAAATATTATATAGACATATTCACTAAAGAGTATAAAG
+      2 TTTTATTATACAAAGCTAGTAAAAAATATAAATAAGGGGGTATTGGTTTAAAAATTTTTTTTTTATATTTTTTTAAACTCATTCATTTCTTCAAACACCT
 ```
 
 
@@ -362,22 +417,17 @@ ls -1s viral.raw.n*
 tar cvf - viral.raw.n* | gzip > viral.raw.tar.gz
 
 
-
-
-
-
-makeblastdb -in viral.masked.fa -dbtype nucl -out viral.masked -title viral.masked -parse_seqids
-
+makeblastdb -in viral.raw.fa.masked -dbtype nucl -out viral.masked -title viral.masked -parse_seqids
 
 ls -1s viral.masked.n*
-
-
-
-
-
+ 1444 viral.masked.nhr
+  144 viral.masked.nin
+   48 viral.masked.nog
+  384 viral.masked.nsd
+   12 viral.masked.nsi
+76944 viral.masked.nsq
 
 tar cvf - viral.masked.n* | gzip > viral.masked.tar.gz
-
 ```
 
 
@@ -629,12 +679,9 @@ Spot Instance limits are dynamic. When your account is new, your limit might be 
 8/19/2019, 4:07:13 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1a while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded
 
 
-
-
-
-
 Stuck in a "loop".
 
+```
 8/19/2019, 7:18:47 PM	error	spotInstanceCountLimitExceeded		
 8/19/2019, 7:08:59 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1a while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded	
 8/19/2019, 7:08:59 PM	error	allLaunchSpecsTemporarilyBlacklisted	Several attempts to launch instances have failed. Either the request could not be satisfied or the configuration is not valid. We will retry the request again later. For more information, see the description of the event.	
@@ -645,6 +692,7 @@ Stuck in a "loop".
 8/19/2019, 7:03:37 PM	error	spotInstanceCountLimitExceeded		
 8/19/2019, 7:03:26 PM	information	launchSpecUnusable	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1e, Spot bid price is less than Spot market price $-1.0000	
 8/19/2019, 6:48:26 PM	error	spotInstanceCountLimitExceeded	
+```
 
 
 
@@ -683,6 +731,16 @@ If it is the intention to submit massive numbers of jobs, the "array job" should
 
 https://docs.aws.amazon.com/batch/latest/userguide/array_index_example.html
 
+
+An array job will submit the number of jobs defined by `size` each setting the environment variable `AWS_BATCH_JOB_ARRAY_INDEX` from 0 to `size-1`.
+The submitted script just needs to deal with this variable.
+`size` needs to be between 2 and 10,000.
+I have the need for creating an array job of about 109,000 plus or minus a few so I've added a `page` argument.
+
+
+
+
+
 ```BASH
 aws batch submit-job --job-name array_test_1 --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=5 --container-overrides '{ "command": ["array_handler.bash","1000genomes","1"]}'
 
@@ -702,6 +760,7 @@ SPOT Instance Requests Limit was increased from "default" to 180.
 Attempt at 100 item array job started and executed nicely this morning.
 
 
+```
 However, the limits for Spot Instances are not raised depending upon the type of instance but the total Spot Instance limits in general. For example, in this case, I've raised the limits for c5.18xlarges Spot Instances upto 100 but you can also launch other c5 instances depending upon the size. For your convenience, I've listed the number of Spot Instances you can launch depending upon its size
 > upto 74 c5.24xlarges Spot Instances with the current Spot Instance limits
 > upto 100 c5.18xlarges Spot Instances with the current Spot Instance limits
@@ -719,6 +778,7 @@ It is still unclear to me as to why it wouldn't start my SPOT instance even when
 8/20/2019, 12:51:28 PM	fleetRequestChange	active		
 8/20/2019, 12:51:28 PM	information	launchSpecUnusable	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1e, Spot bid price is less than Spot market price $-1.0000	
 8/20/2019, 12:51:18 PM	fleetRequestChange	submitted	
+```
 
 
 
@@ -757,12 +817,16 @@ CONTAINER ID        IMAGE                  COMMAND             CREATED          
 docker exec -it 235487af1717 /bin/bash
 ```
 
+If you used a different Linux base for your docker container, the username will likely be different.
+
 
 
 
 #	Total time
 
 I processed the 7th largest file in 13 hours.
+
+```BASH
 31468335171 data/HG00251/sequence_read/ERR018427_2.filt.fastq.gz
 
 31468335171 bases / 13 hours
@@ -772,8 +836,9 @@ awk '{s+=$1}END{print s}' 1kg.files
 71033560137387 total bases
 71033560137387 bases / 2420641167(bases/hour)
 29344.94 hours
+```
 
-Approximately 30,000 hours.
+Approximately 30,000 hours of total processing time.
 
 
 
