@@ -58,12 +58,12 @@ NCBI's nt has nearly 3 million.
 
 Why the huge difference?
 
-What about NCBI's nr?
-Contains proteins, not nucleotides, and contains nearly twice as many viruses than nt.
 
 
 ##	Viral Sequence Acquisition From NCBI RefSeq
 
+
+One August 28, 2019 ...
 
 
 ```BASH
@@ -71,7 +71,7 @@ rsync -avz --progress --include="*fna.gz" --exclude="*" rsync://ftp.ncbi.nih.gov
 
 ls -1s viral*genomic.fna.gz
 63744 viral.1.1.genomic.fna.gz
-29952 viral.2.1.genomic.fna.gz
+30208 viral.2.1.genomic.fna.gz
 
 zcat viral*.fna.gz > viral.genomic.fa
 ```
@@ -79,7 +79,7 @@ zcat viral*.fna.gz > viral.genomic.fa
 
 
 
-##	Viral Sequence Extraction From NCBI's nt and nr Databases
+##	Viral Sequence Extraction From NCBI's nt Database
 
 
 The complete nt database is quite large. ~100GB. Extracting just the viruses.
@@ -127,8 +127,16 @@ grep -c "^>" nt.viruses.fa
 
 
 
+
+
+
+<!---
+
+What about NCBI's nr?
+Contains proteins, not nucleotides, and contains nearly twice as many viruses than nt.
+
 The "nr" database is also available.
-It contains proteins, rather than nucleotides, but it is similar.
+It contains proteins, rather than nucleotides, so not using but it is similar.
 And it contains more than twice as many viral sequences.
 Really unclear as to why such a large difference in numbers.
 
@@ -154,6 +162,7 @@ blastdbcmd -db nr -entry_batch nr.viruses.seqidlist > nr.viruses.fa
 grep -c "^>" nr.viruses.fa
 5694044
 ```
+-->
 
 
 
@@ -289,6 +298,54 @@ Does masking matter in post alignment analysis?
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+https://github.com/yjx1217/RMRB
+RepBaseRepeatMaskerEdition-20170127.tar.gz
+
+
+Trying to get the latest RepBase
+
+wget http://www.dfam.org/releases/Dfam_3.1/families/Dfam.hmm.gz
+
+
+Install RepeatMasker Libraries
+RepeatMasker now comes with the open Dfam database and will work out-of-the box with this library. However it is advised that you also obtain a license for the RepBase RepeatMasker Edition to supplement these sequences. To obtain a license and download the library go to http://www.girinst.org. Once you have obtaianed the library ( current version is RepBaseRepeatMaskerEdition-20181026.tar.gz ) file from GIRI unpack it in the RepeatMasker directory and it will automatically place the contents in the correct subdirectories. Then complete the installation by running ( or rerunning ) the configure program to prepare the libraries for RepeatMasker use.
+cp RepBaseRepeatMaskerEdition-########.tar.gz /usr/local/RepeatMasker/
+cd /usr/local/RepeatMasker
+gunzip RepBaseRepeatMaskerEdition-########.tar.gz
+tar xvf RepBaseRepeatMaskerEdition-########.tar
+rm RepBaseRepeatMaskerEdition-########.tar
+
+
+Check for Dfam Updates ( optional )
+Download the Dfam.hmm.gz library from http://www.dfam.org and save it to the RepeatMasker/Libraries directory. Uncompress the file before using RepeatMasker. The RepeatMasker distribution contains the Dfam 2.0 library.
+
+
+
+
 ```BASH
 
 
@@ -402,7 +459,7 @@ samtools view viral.masked-100bp.hg38.loc.sam | awk '{print $10}' | sort | uniq 
 
 
 
-
+###	Multi-Masking
 
 
 Running RepeatMasker on the output of RepeatMasker masks more. Odd. Run multiple times? Acceptable practice?
@@ -412,10 +469,15 @@ Running the
 ```BASH
 
 RepeatMasker -s -pa 40 viral.raw.fa
+...
 RepeatMasker -s -pa 40 viral.raw.fa.masked
+...
 RepeatMasker -s -pa 40 viral.raw.fa.masked.masked
+...
 RepeatMasker -s -pa 40 viral.raw.fa.masked.masked.masked
+...
 RepeatMasker -s -pa 40 viral.raw.fa.masked.masked.masked.masked
+...
 
 
 viral.raw.fa.tbl:bases masked:    2799427 bp ( 0.89 %)
@@ -423,6 +485,55 @@ viral.raw.fa.masked.tbl:bases masked:     150580 bp ( 0.05 %)
 viral.raw.fa.masked.masked.tbl:bases masked:       1654 bp ( 0.00 %)
 viral.raw.fa.masked.masked.masked.tbl:bases masked:        143 bp ( 0.00 %)
 No repetitive sequences were detected in viral.raw.fa.masked.masked.masked.masked
+
+
+
+
+
+
+
+
+
+
+
+ONCE HERV IS UP AND RUNNING ....
+
+
+
+faSplit size -extra=50 viral.raw.fa.masked.masked.masked.masked 50 viral.multimasked-100bp -oneFile
+
+
+grep -c "^>" viral.multimasked-100bp.fa
+
+
+
+bowtie2 -x hg38 -f -U viral.multimasked-100bp.fa --very-sensitive --no-unal -S viral.multimasked-100bp.hg38.e2e.sam
+
+
+bowtie2 -x hg38 -f -U viral.multimasked-100bp.fa --very-sensitive-local --no-unal -S viral.multimasked-100bp.hg38.loc.sam
+
+
+samtools view -c viral.multimasked-100bp.hg38.e2e.sam 
+
+
+samtools view -c viral.multimasked-100bp.hg38.loc.sam 
+
+
+
+samtools view viral.multimasked-100bp.hg38.e2e.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
+
+
+samtools view viral.multimasked-100bp.hg38.loc.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
+
+
+
+
+
+
+
+
+
+
 
 
 ```
@@ -458,6 +569,15 @@ ls -1s viral.raw.n*
 tar cvf - viral.raw.n* | gzip > viral.raw.tar.gz
 
 
+
+
+
+Masked or MultiMasked?
+
+
+
+
+
 makeblastdb -in viral.raw.fa.masked -dbtype nucl -out viral.masked -title viral.masked -parse_seqids
 
 ls -1s viral.masked.n*
@@ -485,19 +605,7 @@ When using AWS Batch, the job command cannot include the use of pipes as they wi
 
 This basically means that your job will probably need a script.
 
-Don't even need a script
-
-Actually, kinda do NEED a script. The command converts pipes to strings.
-
 But don't need a complex script. Processing is a series of pipes from S3(or ftp) to S3.
-
-I don't think that including pipes in the command is acceptable.
-
-They just get converted to strings and then passed as params to the first command.
-
-viral_identification.bash
-
-array_handler.bash
 
 
 
@@ -580,7 +688,7 @@ XXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification
 Login, tag the image and push it to the repository.
 Be sure to use the added --no-include-email option as without it the output will include deprecated "-e none"
 
-For privacy, I used a command to set my Account ID / ECR repository.
+For privacy in this README, I used a command to set my Account ID / ECR repository.
 
 
 ```BASH
@@ -615,7 +723,7 @@ aws sts get-caller-identity | jq -r '.Account'
 
 ##	Create an EC2 KeyPair
 
-This is kinda optional.
+This is kinda optional, but again strongly advised.
 
 This keypair will allow you connect to instances, predominantly for debugging.
 
@@ -659,6 +767,7 @@ aws cloudformation create-stack --template-body file://batch-setup.template.yaml
 ```
 
 
+To destroy everything ...
 
 
 ```BASH
