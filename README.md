@@ -183,7 +183,7 @@ The most common issue is including a greater-than symbol after the first charact
 ```BASH
 sed -e 's/<[^>]*>/_/g' viral.genomic.fa > viral.raw.fa
 
-diff viral.genomic.fa viral.raw.fa 
+diff viral.genomic.fa viral.raw.fa
 3440738c3440738
 < >NC_042059.1 Halobacterium phage phiH T4, T4', and T<down>LX1</down> genes, complete sequence; and orf75 (T<down>LX3</down>) gene, complete cds
 ---
@@ -221,7 +221,7 @@ bowtie2 --version
 64-bit
 Built on system76-server
 Tue Apr 17 15:46:04 MDT 2018
-Compiler: gcc version 5.4.0 20160609 (Ubuntu 5.4.0-6ubuntu1~16.04.9) 
+Compiler: gcc version 5.4.0 20160609 (Ubuntu 5.4.0-6ubuntu1~16.04.9)
 Options: -O3 -m64 -msse2 -funroll-loops -g3 -std=c++98 -DPOPCNT_CAPABILITY -DWITH_TBB -DNO_SPINLOCK -DWITH_QUEUELOCK=1
 Sizeof {int, long, long long, void*, size_t, off_t}: {4, 8, 8, 8, 8, 8}
 
@@ -249,10 +249,10 @@ samtools 1.8
 Using htslib 1.8
 Copyright (C) 2018 Genome Research Ltd.
 
-samtools view -c viral.raw-100bp.hg38.e2e.sam 
+samtools view -c viral.raw-100bp.hg38.e2e.sam
 544
 
-samtools view -c viral.raw-100bp.hg38.loc.sam 
+samtools view -c viral.raw-100bp.hg38.loc.sam
 10453
 
 samtools view viral.raw-100bp.hg38.e2e.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
@@ -324,11 +324,14 @@ Does masking matter in post alignment analysis?
 
 https://github.com/yjx1217/RMRB
 RepBaseRepeatMaskerEdition-20170127.tar.gz
+Can't use. Only includes RMRBSeqs.embl and RepeatMasker seems to be expecting RMRBMeta.embl
 
 
 Trying to get the latest RepBase
 
+wget http://www.dfam.org/releases/Dfam_3.1/families/Dfam.embl.gz
 wget http://www.dfam.org/releases/Dfam_3.1/families/Dfam.hmm.gz
+cd RepeatMasker/Libraries; gunzip Dfam.embl.gz; gunzip Dfam.hmm.gz ; cd .. ; ./configure
 
 
 Install RepeatMasker Libraries
@@ -356,7 +359,7 @@ RepeatMasker -s -pa 40 viral.raw.fa > RepeatMasker.out
 
 
 
-head -3 RepeatMasker.out 
+head -3 RepeatMasker.out
 RepeatMasker version open-4.0.9
 Search Engine: NCBI/RMBLAST [ 2.9.0+ ]
 Master RepeatMasker Database: /home/jake/.local/RepeatMasker-open-4-0-9-p2/Libraries/RepeatMaskerLib.embl ( Complete Database: CONS-Dfam_3.0 )
@@ -366,6 +369,7 @@ Master RepeatMasker Database: /home/jake/.local/RepeatMasker-open-4-0-9-p2/Libra
 
 
 
+cat RepeatMasker.out | sed -E 's/ in batch [[:digit:]]+ of [[:digit:]]+//' | sort | uniq
 cat RepeatMasker.out | sed 's/ in batch [[:digit:]]\+ of [[:digit:]]\+//' | sort | uniq
 
 Checking for E. coli insertion elements
@@ -389,14 +393,6 @@ The following E coli IS elements could not be confidently clipped out:
   IS5#ARTEFACT in NC_005856.1frag-1: 7667 - 8702
   IS5#ARTEFACT in NC_042128.1frag-2: 50115 - 50731
   IS5#ARTEFACT in NC_042128.1frag-2: 57463 - 58079
-
-
-
-
-
-
-
-
 
 
 
@@ -424,10 +420,10 @@ bowtie2 -x hg38 -f -U viral.masked-100bp.fa --very-sensitive-local --no-unal -S 
 0.04% overall alignment rate
 
 
-samtools view -c viral.masked-100bp.hg38.e2e.sam 
+samtools view -c viral.masked-100bp.hg38.e2e.sam
 122
 
-samtools view -c viral.masked-100bp.hg38.loc.sam 
+samtools view -c viral.masked-100bp.hg38.loc.sam
 2563
 
 
@@ -459,12 +455,116 @@ samtools view viral.masked-100bp.hg38.loc.sam | awk '{print $10}' | sort | uniq 
 
 
 
+
+
+
+
+
+
+updated to Dfam 3.1
+
+
+
+
+
+
+
+
+```BASH
+RepeatMasker -s -pa 40 viral.raw.fa > RepeatMasker.out
+
+head -3 RepeatMasker.out
+RepeatMasker version open-4.0.9
+Search Engine: NCBI/RMBLAST [ 2.9.0+ ]
+Master RepeatMasker Database: /Users/jakewendt/.local/RepeatMasker-open-4-0-9-p2/Libraries/RepeatMaskerLib.embl ( Complete Database: CONS-Dfam_3.1 )
+
+cat RepeatMasker.out | sed -E 's/ in batch [[:digit:]]+ of [[:digit:]]+//' | sort | uniq ... moderate
+
+Checking for E. coli insertion elements
+identifying ancient repeats
+identifying full-length ALUs
+identifying full-length interspersed repeats
+identifying long interspersed repeats
+identifying most interspersed repeats
+identifying remaining ALUs
+identifying retrovirus-like sequences
+identifying Simple Repeats
+
+The following E coli IS elements could not be confidently clipped out:
+  IS1#ARTEFACT in NC_005856.1frag-1: 22650 - 22848
+  IS1#ARTEFACT in NC_005856.1frag-1: 23125 - 23314
+  IS1#ARTEFACT in NC_022749.1: 35265 - 35605
+  IS1#ARTEFACT in NC_022749.1: 35731 - 35929
+  IS1#ARTEFACT in NC_042128.1frag-2: 50923 - 51121
+  IS1#ARTEFACT in NC_042128.1frag-2: 51247 - 51360
+  IS1#ARTEFACT in NC_042128.1frag-2: 51375 - 51570
+  IS5#ARTEFACT in NC_005856.1frag-1: 7667 - 8702
+  IS5#ARTEFACT in NC_042128.1frag-2: 50115 - 50731
+  IS5#ARTEFACT in NC_042128.1frag-2: 57463 - 58079
+
+faSplit size -extra=50 viral.raw.fa.masked 50 viral.masked-100bp -oneFile
+6224051 pieces of 6257355 written
+
+grep -c "^>" viral.masked-100bp.fa
+6224051
+
+bowtie2 -x hg38 -f -U viral.masked-100bp.fa --very-sensitive --no-unal -S viral.masked-100bp.hg38.e2e.sam
+6224051 reads; of these:
+  6224051 (100.00%) were unpaired; of these:
+    6223929 (100.00%) aligned 0 times
+    62 (0.00%) aligned exactly 1 time
+    60 (0.00%) aligned >1 times
+0.00% overall alignment rate
+
+bowtie2 -x hg38 -f -U viral.masked-100bp.fa --very-sensitive-local --no-unal -S viral.masked-100bp.hg38.loc.sam
+6224051 reads; of these:
+  6224051 (100.00%) were unpaired; of these:
+    6221488 (99.96%) aligned 0 times
+    1494 (0.02%) aligned exactly 1 time
+    1069 (0.02%) aligned >1 times
+0.04% overall alignment rate
+
+samtools view -c viral.masked-100bp.hg38.e2e.sam
+122
+
+samtools view -c viral.masked-100bp.hg38.loc.sam
+2563
+```
+
+No difference in the numbers comparing Dfam 3.0 and Dfam 3.1.
+
+
+Perhaps the RepBaseRepeatMaskerEdition-20181026.tar.gz would make a difference?
+Cost thousands of dollars!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ###	Multi-Masking
 
 
 Running RepeatMasker on the output of RepeatMasker masks more. Odd. Run multiple times? Acceptable practice?
 
-Running the 
+
+Dfam 3.1
+
+
 
 ```BASH
 
@@ -480,6 +580,10 @@ RepeatMasker -s -pa 40 viral.raw.fa.masked.masked.masked.masked
 ...
 
 
+
+Not sure where these numbers came from as current ones much less.
+
+grep "^bases masked" *tbl
 viral.raw.fa.tbl:bases masked:    2799427 bp ( 0.89 %)
 viral.raw.fa.masked.tbl:bases masked:     150580 bp ( 0.05 %)
 viral.raw.fa.masked.masked.tbl:bases masked:       1654 bp ( 0.00 %)
@@ -491,16 +595,10 @@ No repetitive sequences were detected in viral.raw.fa.masked.masked.masked.maske
 
 
 
+ln -s viral.raw.fa.masked.masked.masked.masked viral.multimasked.fa
 
 
-
-
-
-ONCE HERV IS UP AND RUNNING ....
-
-
-
-faSplit size -extra=50 viral.raw.fa.masked.masked.masked.masked 50 viral.multimasked-100bp -oneFile
+faSplit size -extra=50 viral.multimasked.fa 50 viral.multimasked-100bp -oneFile
 
 
 grep -c "^>" viral.multimasked-100bp.fa
@@ -513,10 +611,10 @@ bowtie2 -x hg38 -f -U viral.multimasked-100bp.fa --very-sensitive --no-unal -S v
 bowtie2 -x hg38 -f -U viral.multimasked-100bp.fa --very-sensitive-local --no-unal -S viral.multimasked-100bp.hg38.loc.sam
 
 
-samtools view -c viral.multimasked-100bp.hg38.e2e.sam 
+samtools view -c viral.multimasked-100bp.hg38.e2e.sam
 
 
-samtools view -c viral.multimasked-100bp.hg38.loc.sam 
+samtools view -c viral.multimasked-100bp.hg38.loc.sam
 
 
 
@@ -546,6 +644,73 @@ samtools view viral.multimasked-100bp.hg38.loc.sam | awk '{print $10}' | sort | 
 
 
 The results from RepeatMasker are not perfect, but given that the blast results include alignment locations, these regions could be ignored or removed in post alignment analysis.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##	RepeatModeler
+
+
+Try RepeatModeler on the viral reference?
+RepeatModeler Version open-1.0.11
+
+Building the database is quick, but RepeatModeler takes many hours, depending on the machine.
+
+Then mask the multimasked fasta?
+
+
+```BASH
+BuildDatabase -name viral -engine ncbi viral.raw.fa
+
+RepeatModeler -pa 40 -engine ncbi -database viral
+
+
+
+
+
+
+
+
+RepeatMasker -s -pa 40 -e ncbi -lib consensi.fa.classified viral.multimasked.fa
+
+
+faSplit size -extra=50 viral.multimasked.fa.masked 50 viral.viralmasked-100bp -oneFile
+
+
+bowtie2 -x hg38 -f -U viral.viralmasked-100bp.fa --very-sensitive --no-unal -S viral.viralmasked-100bp.hg38.e2e.sam
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -621,7 +786,7 @@ Create a Docker image containing anything needed by any of your job scripts.
 
 
 ```BASH
-docker build -t viral_identification .   
+docker build -t viral_identification .
 ```
 
 
@@ -832,16 +997,16 @@ Spot Instance limits are dynamic. When your account is new, your limit might be 
 Stuck in a "loop".
 
 ```
-8/19/2019, 7:18:47 PM	error	spotInstanceCountLimitExceeded		
-8/19/2019, 7:08:59 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1a while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded	
-8/19/2019, 7:08:59 PM	error	allLaunchSpecsTemporarilyBlacklisted	Several attempts to launch instances have failed. Either the request could not be satisfied or the configuration is not valid. We will retry the request again later. For more information, see the description of the event.	
-8/19/2019, 7:07:58 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1c while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded	
-8/19/2019, 7:06:58 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1b while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded	
-8/19/2019, 7:05:38 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1f while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded	
-8/19/2019, 7:04:37 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1d while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded	
-8/19/2019, 7:03:37 PM	error	spotInstanceCountLimitExceeded		
-8/19/2019, 7:03:26 PM	information	launchSpecUnusable	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1e, Spot bid price is less than Spot market price $-1.0000	
-8/19/2019, 6:48:26 PM	error	spotInstanceCountLimitExceeded	
+8/19/2019, 7:18:47 PM	error	spotInstanceCountLimitExceeded
+8/19/2019, 7:08:59 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1a while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded
+8/19/2019, 7:08:59 PM	error	allLaunchSpecsTemporarilyBlacklisted	Several attempts to launch instances have failed. Either the request could not be satisfied or the configuration is not valid. We will retry the request again later. For more information, see the description of the event.
+8/19/2019, 7:07:58 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1c while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded
+8/19/2019, 7:06:58 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1b while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded
+8/19/2019, 7:05:38 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1f while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded
+8/19/2019, 7:04:37 PM	information	launchSpecTemporarilyBlacklisted	Repeated errors have occurred processing the launch specification "c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1d while launching spot instance". It will not be retried for at least 13 minutes. Error message: Spot Max Instance Count Exceeded
+8/19/2019, 7:03:37 PM	error	spotInstanceCountLimitExceeded
+8/19/2019, 7:03:26 PM	information	launchSpecUnusable	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1e, Spot bid price is less than Spot market price $-1.0000
+8/19/2019, 6:48:26 PM	error	spotInstanceCountLimitExceeded
 ```
 
 
@@ -922,12 +1087,12 @@ It is still unclear to me as to why it wouldn't start my SPOT instance even when
 
 8/20/2019, 12:51:31 PM	instanceChange	launched	{"instanceType":"c5.18xlarge","image":"ami-0d09143c6fc181fe3","productDescription":"Linux/UNIX","availabilityZone":"us-east-1d"}	i-0593e7f9bf14cfee1
 8/20/2019, 12:51:31 PM	instanceChange	launched	{"instanceType":"c5.18xlarge","image":"ami-0d09143c6fc181fe3","productDescription":"Linux/UNIX","availabilityZone":"us-east-1d"}	i-0ed25aae31baf8885
-8/20/2019, 12:51:31 PM	bidChange	active	BidId sir-2k384zik, PreviousState: active	
-8/20/2019, 12:51:31 PM	bidChange	active	BidId sir-49zr6mfk, PreviousState: active	
-8/20/2019, 12:51:29 PM	fleetRequestChange	progress	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1d, capacityUnitsRequested: 2.0, totalCapacityUnitsRequested: 2.0, totalCapacityUnitsFulfilled: 0.0, targetCapacity: 2	
-8/20/2019, 12:51:28 PM	fleetRequestChange	active		
-8/20/2019, 12:51:28 PM	information	launchSpecUnusable	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1e, Spot bid price is less than Spot market price $-1.0000	
-8/20/2019, 12:51:18 PM	fleetRequestChange	submitted	
+8/20/2019, 12:51:31 PM	bidChange	active	BidId sir-2k384zik, PreviousState: active
+8/20/2019, 12:51:31 PM	bidChange	active	BidId sir-49zr6mfk, PreviousState: active
+8/20/2019, 12:51:29 PM	fleetRequestChange	progress	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1d, capacityUnitsRequested: 2.0, totalCapacityUnitsRequested: 2.0, totalCapacityUnitsFulfilled: 0.0, targetCapacity: 2
+8/20/2019, 12:51:28 PM	fleetRequestChange	active
+8/20/2019, 12:51:28 PM	information	launchSpecUnusable	c5.18xlarge, ami-0d09143c6fc181fe3, Linux/UNIX, us-east-1e, Spot bid price is less than Spot market price $-1.0000
+8/20/2019, 12:51:18 PM	fleetRequestChange	submitted
 ```
 
 
@@ -950,7 +1115,7 @@ Connect to it with a `docker exec` command.
 
 ```BASH
 
-aws ec2 describe-instances --query 'Reservations[].Instances[].PublicIpAddress' 
+aws ec2 describe-instances --query 'Reservations[].Instances[].PublicIpAddress'
 
 [
     "3.91.106.157",
@@ -1002,7 +1167,7 @@ Approximately 30,000 hours of total processing time.
 Not sure if I worded that clearly enough.
 
 
-##	Will cancelled spot instances rerun the job? 
+##	Will cancelled spot instances rerun the job?
 
 Not on the default MANAGED Compute Environment. Possibly if self managed.
 
@@ -1042,7 +1207,7 @@ Does this not work with SPOT?
 Do I just need to wait longer?
 
 I disabled the "stuck" compute environment and the spot request was canceled.
-The jobs stayed RUNNABLE for about 10 minutes and then a new spot request 
+The jobs stayed RUNNABLE for about 10 minutes and then a new spot request
 was issued with the next compute environment. Then they ran.
 
 
