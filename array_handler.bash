@@ -5,6 +5,11 @@ page=${2:-1}
 
 page_length=10000
 
+echo "$0 $*"
+echo "env:"
+env
+echo
+
 echo "0:command:$0"
 echo "1:list:$1"
 echo "2:page:$2"
