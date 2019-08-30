@@ -590,6 +590,12 @@ viral.raw.fa.masked.masked.tbl:bases masked:       1654 bp ( 0.00 %)
 viral.raw.fa.masked.masked.masked.tbl:bases masked:        143 bp ( 0.00 %)
 No repetitive sequences were detected in viral.raw.fa.masked.masked.masked.masked
 
+Odd the drop in the masked bp
+grep "^bases masked" *tbl
+viral.raw.fa.masked.masked.masked.tbl:bases masked:        143 bp ( 0.00 %)
+viral.raw.fa.masked.masked.tbl:bases masked:       1654 bp ( 0.00 %)
+viral.raw.fa.masked.tbl:bases masked:      46398 bp ( 0.01 %)
+viral.raw.fa.tbl:bases masked:    2642180 bp ( 0.84 %)
 
 
 
@@ -599,64 +605,45 @@ ln -s viral.raw.fa.masked.masked.masked.masked viral.multimasked.fa
 
 
 faSplit size -extra=50 viral.multimasked.fa 50 viral.multimasked-100bp -oneFile
+6222947 pieces of 6257355 written
 
+FEWER PIECES CORRESPONDING TO MORE MASKED BP
 
 grep -c "^>" viral.multimasked-100bp.fa
-
-
+6222947
 
 bowtie2 -x hg38 -f -U viral.multimasked-100bp.fa --very-sensitive --no-unal -S viral.multimasked-100bp.hg38.e2e.sam
+6222947 reads; of these:
+  6222947 (100.00%) were unpaired; of these:
+    6222825 (100.00%) aligned 0 times
+    62 (0.00%) aligned exactly 1 time
+    60 (0.00%) aligned >1 times
+0.00% overall alignment rate
 
+NO DIFFERENCE
 
 bowtie2 -x hg38 -f -U viral.multimasked-100bp.fa --very-sensitive-local --no-unal -S viral.multimasked-100bp.hg38.loc.sam
+6222947 reads; of these:
+  6222947 (100.00%) were unpaired; of these:
+    6220432 (99.96%) aligned 0 times
+    1478 (0.02%) aligned exactly 1 time
+    1037 (0.02%) aligned >1 times
+0.04% overall alignment rate
 
+A FEW LESS HERE
 
 samtools view -c viral.multimasked-100bp.hg38.e2e.sam
-
+122
 
 samtools view -c viral.multimasked-100bp.hg38.loc.sam
-
-
-
-samtools view viral.multimasked-100bp.hg38.e2e.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
-
-
-samtools view viral.multimasked-100bp.hg38.loc.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
-
-
-
-
-
-
-
-
-
-
-
+2515
 
 ```
 
-
-
-
-
-
-
+Overall, repeated masking has minimal impact.
+That said, let's add to this a viral masking.
 
 The results from RepeatMasker are not perfect, but given that the blast results include alignment locations, these regions could be ignored or removed in post alignment analysis.
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ##	RepeatModeler
 
@@ -664,7 +651,7 @@ The results from RepeatMasker are not perfect, but given that the blast results 
 Try RepeatModeler on the viral reference?
 RepeatModeler Version open-1.0.11
 
-Building the database is quick, but RepeatModeler takes many hours, depending on the machine.
+Building the database is quick, but RepeatModeler takes many hours (or days), depending on the machine.
 
 Then mask the multimasked fasta?
 
