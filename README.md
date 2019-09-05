@@ -407,6 +407,7 @@ The fetch_and_run example is built on this which is fine, but it effectively ign
 This would work well if you can't or don't want to edit the docker image.
 It is stuck to getting its job script from S3.
 
+https://aws.amazon.com/blogs/compute/creating-a-simple-fetch-and-run-aws-batch-job/
 
 
 
@@ -653,6 +654,19 @@ I have the need for creating an array job of about 109,000 plus or minus a few s
 
 
 ```BASH
+aws batch submit-job --job-name 1kg --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=10 --container-overrides '{ "command": ["array_handler.bash","1000genomes","10"]}'
+
+aws batch submit-job --job-name 1kg_un --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=10 --container-overrides '{ "command": ["array_handler.bash","1000genomes.unmapped","1"]}'
+
+aws batch submit-job --job-name geuvadis --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=10 --container-overrides '{ "command": ["array_handler.bash","geuvadis","1"]}'
+
+
+
+
+
+
+
+
 aws batch submit-job --job-name array_test_1 --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=5 --container-overrides '{ "command": ["array_handler.bash","1000genomes","1"]}'
 
 aws batch submit-job --job-name array_test_2 --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=5 --container-overrides '{ "command": ["array_handler.bash","Other","10"]}'
@@ -849,7 +863,6 @@ https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ba
 
 
 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html
-
 
 
 
