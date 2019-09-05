@@ -736,8 +736,13 @@ ssh -i ~/.ssh/batchKeyPair -o UserKnownHostsFile=/dev/null -o StrictHostKeyCheck
 
 
 docker ps -a
-CONTAINER ID        IMAGE                  COMMAND             CREATED             STATUS              PORTS               NAMES
-235487af1717        viral_identification   "/bin/bash"         8 seconds ago       Up 7 seconds                            wonderful_fermi
+CONTAINER ID        IMAGE                                                               COMMAND                  CREATED             STATUS              PORTS               NAMES
+7143569900dd        XXXXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification   "array_handler.bash …"   31 minutes ago      Up 31 minutes                           ecs-myJobDefinition-2-default-d2d6cbb2d5e290c24e00
+01c440675e17        XXXXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification   "array_handler.bash …"   31 minutes ago      Up 31 minutes                           ecs-myJobDefinition-2-default-d4f0a9d499efc2fac601
+9ef4b77a3bba        XXXXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification   "array_handler.bash …"   31 minutes ago      Up 31 minutes                           ecs-myJobDefinition-2-default-9280a2a2fadc98aca301
+ba277bfca29f        XXXXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification   "array_handler.bash …"   31 minutes ago      Up 31 minutes                           ecs-myJobDefinition-2-default-e4fff2a89cbaa9957000
+16d8bd5ed0d9        amazon/amazon-ecs-agent:latest                                      "/agent"                 32 minutes ago      Up 32 minutes                           ecs-agent
+
 
 docker exec -it 235487af1717 /bin/bash
 ```
