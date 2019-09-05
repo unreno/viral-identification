@@ -63,7 +63,7 @@ Why the huge difference?
 ##	Viral Sequence Acquisition From NCBI RefSeq
 
 
-One August 28, 2019 ...
+On August 28, 2019 ...
 
 
 ```BASH
