@@ -30,7 +30,7 @@ if [ -f ${list} ] ; then
 
 	if [ -n ${url} ] ; then
 		echo "Found :${url}:"
-		#viral_identification.bash ${url}
+		viral_identification.bash ${url}
 	else
 		echo "No line match these specs"
 	fi
