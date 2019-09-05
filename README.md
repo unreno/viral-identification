@@ -78,6 +78,7 @@ zcat viral*.fna.gz > viral.genomic.fa
 
 
 
+<!---
 
 ##	Viral Sequence Extraction From NCBI's nt Database
 
@@ -130,7 +131,6 @@ grep -c "^>" nt.viruses.fa
 
 
 
-<!---
 
 What about NCBI's nr?
 Contains proteins, not nucleotides, and contains nearly twice as many viruses than nt.
@@ -162,12 +162,12 @@ blastdbcmd -db nr -entry_batch nr.viruses.seqidlist > nr.viruses.fa
 grep -c "^>" nr.viruses.fa
 5694044
 ```
--->
 
 
 
 Not sure of the best reference to use, but for the moment I'm using that compiled from RefSeq.
 
+-->
 
 
 
