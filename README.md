@@ -620,7 +620,7 @@ bowtie2 -x hg38 -f -U viral.multimasked-100bp.fa --very-sensitive --no-unal -S v
     60 (0.00%) aligned >1 times
 0.00% overall alignment rate
 
-NO DIFFERENCE
+NO DIFFERENCE in matches, but fewer reads so pointless
 
 bowtie2 -x hg38 -f -U viral.multimasked-100bp.fa --very-sensitive-local --no-unal -S viral.multimasked-100bp.hg38.loc.sam
 6222947 reads; of these:
