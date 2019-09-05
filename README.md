@@ -4,7 +4,7 @@
 Thorough, unique and unambiguous identification of viral content in a genomic sample.
 
 
-#	AWS FYI
+#	AWS Basics and Preparation
 
 This analysis is designed to use AWS resources from the command line.
 `aws` usually requires your credentials in `~/.aws/config` and `~/.aws/credentials`.
@@ -27,6 +27,7 @@ region = us-east-1
 [profile anotherprofile]
 output = json
 region = us-west-2
+
 
 cat ~/.aws/credentials
 
@@ -72,6 +73,8 @@ ls -1s viral*genomic.fna.gz
 zcat viral*.fna.gz > viral.genomic.fa
 ```
 
+This reference seems to change monthly or so.
+
 
 
 ##	Reference Cleanup
@@ -80,7 +83,8 @@ zcat viral*.fna.gz > viral.genomic.fa
 Some of these entries have sequence names which are invalid to some software.
 
 
-The most common issue is including a greater-than symbol after the first character.
+The most common issue is including a greater-than symbol in the sequence name after the first character as is seen in the example where an XML tag was left in the name.
+I replaced the whole tag with an underscore using `sed`.
 
 
 ```BASH
@@ -187,40 +191,10 @@ samtools view viral.raw-100bp.hg38.loc.sam | awk '{print $10}' | sort | uniq -c 
 
 
 
+###	RepeatMasking
 
 How to properly analyze these masked sequences?
 Does masking matter in post alignment analysis?
-
-
-
-###	RepeatMasking
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -251,127 +225,7 @@ Download the Dfam.hmm.gz library from http://www.dfam.org and save it to the Rep
 
 
 
-
-```BASH
-
-
-
-RepeatMasker -s -pa 40 viral.raw.fa > RepeatMasker.out
-
-
-
-
-
-head -3 RepeatMasker.out
-RepeatMasker version open-4.0.9
-Search Engine: NCBI/RMBLAST [ 2.9.0+ ]
-Master RepeatMasker Database: /home/jake/.local/RepeatMasker-open-4-0-9-p2/Libraries/RepeatMaskerLib.embl ( Complete Database: CONS-Dfam_3.0 )
-
-
-
-
-
-
-cat RepeatMasker.out | sed -E 's/ in batch [[:digit:]]+ of [[:digit:]]+//' | sort | uniq
-cat RepeatMasker.out | sed 's/ in batch [[:digit:]]\+ of [[:digit:]]\+//' | sort | uniq
-
-Checking for E. coli insertion elements
-identifying ancient repeats
-identifying full-length ALUs
-identifying full-length interspersed repeats
-identifying long interspersed repeats
-identifying most interspersed repeats
-identifying remaining ALUs
-identifying retrovirus-like sequences
-identifying Simple Repeats
-
-The following E coli IS elements could not be confidently clipped out:
-  IS1#ARTEFACT in NC_005856.1frag-1: 22650 - 22848
-  IS1#ARTEFACT in NC_005856.1frag-1: 23125 - 23314
-  IS1#ARTEFACT in NC_022749.1: 35265 - 35605
-  IS1#ARTEFACT in NC_022749.1: 35731 - 35929
-  IS1#ARTEFACT in NC_042128.1frag-2: 50923 - 51121
-  IS1#ARTEFACT in NC_042128.1frag-2: 51247 - 51360
-  IS1#ARTEFACT in NC_042128.1frag-2: 51375 - 51570
-  IS5#ARTEFACT in NC_005856.1frag-1: 7667 - 8702
-  IS5#ARTEFACT in NC_042128.1frag-2: 50115 - 50731
-  IS5#ARTEFACT in NC_042128.1frag-2: 57463 - 58079
-
-
-
-faSplit size -extra=50 viral.raw.fa.masked 50 viral.masked-100bp -oneFile
-6224051 pieces of 6257355 written
-
-grep -c "^>" viral.masked-100bp.fa
-6224051
-
-
-bowtie2 -x hg38 -f -U viral.masked-100bp.fa --very-sensitive --no-unal -S viral.masked-100bp.hg38.e2e.sam
-6224051 reads; of these:
-  6224051 (100.00%) were unpaired; of these:
-    6223929 (100.00%) aligned 0 times
-    62 (0.00%) aligned exactly 1 time
-    60 (0.00%) aligned >1 times
-0.00% overall alignment rate
-
-bowtie2 -x hg38 -f -U viral.masked-100bp.fa --very-sensitive-local --no-unal -S viral.masked-100bp.hg38.loc.sam
-6224051 reads; of these:
-  6224051 (100.00%) were unpaired; of these:
-    6221488 (99.96%) aligned 0 times
-    1494 (0.02%) aligned exactly 1 time
-    1069 (0.02%) aligned >1 times
-0.04% overall alignment rate
-
-
-samtools view -c viral.masked-100bp.hg38.e2e.sam
-122
-
-samtools view -c viral.masked-100bp.hg38.loc.sam
-2563
-
-
-samtools view viral.masked-100bp.hg38.e2e.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
-      1 TGGATCGGGAAACTGGTTCTATCAAGGTTGTAGTGTCCAAATAGTGTATTTTGTAGAATTCCAGTAAAGATGGCAAAGAATCAAACACCTGGTCACCTAT
-      1 TGGCACAACCATCTGAATCCAGAAGTGAAGAAAACCTCCTGGACAGAAGAGGAAGATAGAATTATTTACCAGGCACACAAGAGACTGGGAAACAGATGGG
-      1 TGGCGGAAGGACCCTGAGGAGCGGCCCACTTTTGAGTACCTGCAGGCCTTCCTGGAGGACTACTTCACCTCGACAGAGCCCCCAGTACCAGCCTGGAGAG
-      1 TGGCTCGCTGCTCCTGGGAAGTCCCCGGGCTTCGGGTCACAGCCCGTGCAGCTGCCACTATCTCACACTTGCATGCCAGGTGGTCCTCCAGCGTCACCGT
-      1 TTCCATCCATCAGCGCAAAGTAGGTGATTTTGAGGCCCAACATGCTTGACTCTGCCCAAAAGTCACCTTCCTCAGCAGGATGCAGCCTATTACACTCAGC
-      1 TTGCAACAGCCGGAGCAGCGCTGCACCTCCACGCAGGGCGGCCACACCAGGAAGTTGGCATTGGTGCGGTCGATGAGGCGCCGGGAGATCTCGAACACCT
-      1 TTTTAACCAGTGAAATTGACCTGCCCGTGAAGAGGCGGGCATGACACAGCAAGACGAGAAGACCCTATGGAGCTTTAATTTATTAATGCAAACAGTACCT
-      2 CCAACCCTAACCCTAACCCTAGCTCTAAGCCTAACCCCAACCCTAACCCTAACCCTAGCTCTAAGCCTAACCCCAACCCTAACCCTAACCCTAGCTCTAA
-      2 TAACCCTAACCCTAACCCTAAGTCTAACCCTAACCCTAAGTCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTGACCCTAACCCTAGCTCTAAC
-      2 TAGGGTTAGACTTAGGGTTAGGGTTAGACTTAGGGTTAGGGTTAGGGTTAGACCTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGG
-
-samtools view viral.masked-100bp.hg38.loc.sam | awk '{print $10}' | sort | uniq -c | sort -n | tail
-      2 GTTAGAGCTAGGGTTAGGGTCAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGACTTAGGGTTAGGGTTAGACTTAGGGTTAGGGTTAGGGTTA
-      2 GTTTAAAATTTTGTCCAACGTTCCTTTAGGTACACCAGACTTCTCGGATAATTGTTTTGAAGTAAATCCTTTTTCTTTTTTTAATTTTTCTATTATTTCC
-      2 TAAGTCCTCATCCAATTTATAAAAAATATTTGAATTGTTTAATTTAATTATTAATATACTTTTTTCTTTTTCTGTTAAATTAGAATTTTCTAAAATTGTA
-      2 TAATATCTCTTAATAATTCTTTAGAGCCAATATCTACAATATTTTTATTATTTATTTTTAAATATACTCTTTCTTCACCTATAAATATACTATTTCTATT
-      2 TAGCTCTAACCCTAGCCCTAACCCTAACCCTAGCTCTAACCCTAGCCCTAACCCTAACCCTAGCTCTAACCCTAGCCCTAACCCTAACCCTAGCTCTAAC
-      2 TAGGGTTAGACTTAGGGTTAGGGTTAGACTTAGGGTTAGGGTTAGGGTTAGACCTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGGGTTAGG
-      2 TCATCAGACTTCTCCGTTTTTTCTTCTTTGCTGTCTTCTTCTTCTTTCTTGTCTTTCTTGTCTTTCTTACCTTTTTTGTTCTCGTCTTCTTCACTGTCTT
-      2 TCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTCCTCCCCTCTCTC
-      2 TTATTAGATATAGCTTCGTGGATATCTATTGAATTTTATAATAAATGTTATAATATAATAGAAAAATATTATATAGACATATTCACTAAAGAGTATAAAG
-      2 TTTTATTATACAAAGCTAGTAAAAAATATAAATAAGGGGGTATTGGTTTAAAAATTTTTTTTTTATATTTTTTTAAACTCATTCATTTCTTCAAACACCT
-```
-
-
-
-
-
-
-
-
-
-
 updated to Dfam 3.1
-
-
-
-
-
-
-
 
 ```BASH
 RepeatMasker -s -pa 40 viral.raw.fa > RepeatMasker.out
@@ -595,7 +449,7 @@ XXXXXXXXXX.dkr.ecr.us-east-1.amazonaws.com/viral_identification
 Login, tag the image and push it to the repository.
 Be sure to use the added --no-include-email option as without it the output will include deprecated "-e none"
 
-For privacy in this README, I used a command to set my Account ID / ECR repository.
+For privacy in this README, I used a command and variable to set my Account ID / ECR repository.
 
 
 ```BASH
@@ -657,7 +511,7 @@ chmod 400 ~/.ssh/batchKeyPair
 
 
 
-Previously, IAM Roles, Compute Environments, Queues, etc. were created with bash scripts.
+Previously, I created IAM Roles, Compute Environments, Queues, etc. with bash scripts.
 They were very busy, but they checked things, were rerunnable and dealt with existing resources and errors.
 CloudFormation doesn't seem to do that. If a resource already exists, it crashes.
 
@@ -670,7 +524,7 @@ Could, but not using it for creating the container repository though.
 
 
 ```BASH
-aws cloudformation create-stack --template-body file://batch-setup.template.yaml --stack-name batch --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation create-stack --template-body file://batch.template.yaml --stack-name batch --capabilities CAPABILITY_NAMED_IAM
 ```
 
 
