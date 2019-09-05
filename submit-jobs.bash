@@ -7,8 +7,7 @@ set -u  #       Error on usage of unset variables
 set -o pipefail
 
 
-for inurl in $( tail list ) ; do
-
+for inurl in $( cat list ) ; do
 
 	jobname=${inurl//\//_}
 	jobname=${jobname//./_}
