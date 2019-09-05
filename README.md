@@ -539,6 +539,9 @@ Cost thousands of dollars!
 
 
 
+I've run RepeatModeler on hg38 to make my own mask.
+I've run RepeatMasker multiple times.
+Both mask a few thousand more base pairs, but neither reduce the number of aligned 100bp snippets.
 
 
 
@@ -550,8 +553,7 @@ Cost thousands of dollars!
 
 
 
-
-
+<!---
 
 
 
@@ -697,7 +699,7 @@ bowtie2 -x hg38 -f -U viral.viralmasked-100bp.fa --very-sensitive --no-unal -S v
 
 
 
-
+-->
 
 
 
