@@ -1,42 +1,20 @@
 #!/usr/bin/env python
 
-
 import pandas as pd
 import numpy as np
 import glob
 import os
 
-def lane_or_dot(row):
-	parts=row['qaccver'].split('/')
-	if len(parts) > 1:
-		return parts[-1]
-	else:
-		return '.'
-
+#def lane_or_dot(row):
+#	parts=row['qaccver'].split('/')
+#	if len(parts) > 1:
+#		return parts[-1]
+#	else:
+#		return '.'
 
 startdir = os.getcwd()
 
 dfs=[]
-
-#	expecting files like ...
-#./1000genomes/phase3/data/NA11931/sequence_read/ERR243205.filt.viral.raw.tsv.gz
-#./1000genomes/phase3/data/NA11931/sequence_read/ERR243205.filt.viral.masked.tsv.gz
-#./1000genomes/phase3/data/HG01384/alignment/HG01384.unmapped.ILLUMINA.bwa.CLM.low_coverage.20120522.viral.masked.tsv.gz
-#./1000genomes/phase3/data/HG01384/alignment/HG01384.unmapped.ILLUMINA.bwa.CLM.low_coverage.20120522.viral.raw.tsv.gz
-#./1000genomes/phase3/data/HG01377/alignment/HG01377.unmapped.ILLUMINA.bwa.CLM.low_coverage.20120522.viral.raw.tsv.gz
-#./1000genomes/phase3/data/HG01377/alignment/HG01377.unmapped.ILLUMINA.bwa.CLM.low_coverage.20120522.viral.masked.tsv.gz
-#./1000genomes/phase3/data/NA18968/sequence_read/SRR003916.filt.viral.masked.tsv.gz
-#./1000genomes/phase3/data/NA18968/sequence_read/SRR003916.filt.viral.raw.tsv.gz
-#./1000genomes/phase3/data/HG02420/sequence_read/SRR449493.filt.viral.raw.tsv.gz
-#./1000genomes/phase3/data/HG02420/sequence_read/SRR449493.filt.viral.masked.tsv.gz
-#./1000genomes/phase3/data/HG03108/sequence_read/SRR594817.filt.viral.raw.tsv.gz
-#./1000genomes/phase3/data/HG03108/sequence_read/SRR594817.filt.viral.masked.tsv.gz
-
-
-
-#	gonna need to change some stuff when add other datasets
-
-
 
 base="/Users/jakewendt/s3/viral-identification"
 
@@ -45,40 +23,76 @@ os.chdir(base)
 for filepath in glob.iglob('**/*.viral.*.tsv.gz', recursive=True):
 	print(filepath)
 
-	#	The file may exist even if empty so ...
-	try:
-		f = pd.read_csv(filepath, header=None, sep="\t", 
-			names=['qaccver','saccver','pident','length','mismatch','gapopen',
-				'qstart','qend','sstart','send','evalue','bitscore'] )
-		filepath_pieces=filepath.split('/')
-		f['subject']=filepath_pieces[3]
-		f['source']=filepath_pieces[0]
+	f = pd.read_csv(filepath, header=None, sep="\t",
+		names=['qaccver','saccver','pident','length','mismatch','gapopen',
+			'qstart','qend','sstart','send','evalue','bitscore'] )
 
-		file_pieces=filepath_pieces[5].split('.')
-
-		if filepath_pieces[4] == 'sequence_read':
-			f['format']='fastq'
-			#	assign lane (the unlaned file contains "unpaired" reads, but the raw file shows a lane)
-			filelane = file_pieces[0].split('_')
-			if len(filelane) > 1:
-				f['filelane'] = filelane[1]
-			else:
-				f['filelane'] = '.'
-		else:
-			f['format']='unmapped_bam'
-
-		f['reference'] = file_pieces[-3]
-		dfs.append(f)
-	except:
+	if len(f.index) == 0:
 		continue
 
-df = pd.concat(dfs,sort=False)	#sort=True)	# do not sort column names
+	filepath_pieces=filepath.split('/')
+	f.insert( 0, 'file', filepath_pieces[-1] )
+	f.insert( 1, 'source', filepath_pieces[0] )
+
+	# raw or masked ( ...viral.masked.tsv.gz )
+	f['reference'] = f.file.str.split('.',expand=True).iloc[:,-3]
+
+	dfs.append(f)
+
+###########################################################################
+
+df = pd.concat(dfs, sort=False, ignore_index=True)
+
 #df=df.fillna('.')
 #df.sort_index(inplace=True)
 
-df['lane'] = df.apply (lambda row: lane_or_dot(row), axis='columns')
 
-df.insert(0, 'subject', df.pop('subject') )
+pd.set_option('display.max_rows', None)
+
+#
+#	Is it faster to do all at once after concat, or individually before concat?
+#
+# "expand" option is required here
+
+df['lane'] = (df.qaccver + "/0").str.split('/',expand=True)[1]
+df['sample'] = df.qaccver.str.split('.', expand=True)[0]
+
+#df['reference'] = df.file.str.split('.', expand=True)[-3]	#	# raw or masked ( ...viral.masked.tsv.gz )
+#	Creates a dataframe, so negative subscripts are based on the longest array.
+#	Easier just to do this individually.
+#print(df.file.str.split('.', expand=True) )
+#                   0      1      2      3      4       5    6     7     8     9    10    11
+#0        ERR188231_2  fastq     gz  viral    raw     tsv   gz  None  None  None  None  None
+#1        ERR188231_2  fastq     gz  viral    raw     tsv   gz  None  None  None  None  None
+#2        ERR188231_2  fastq     gz  viral    raw     tsv   gz  None  None  None  None  None
+#3        ERR188231_2  fastq     gz  viral    raw     tsv   gz  None  None  None  None  None
+#4        ERR188231_2  fastq     gz  viral    raw     tsv   gz  None  None  None  None  None
+#...              ...    ...    ...    ...    ...     ...  ...   ...   ...   ...   ...   ...
+#8868846    SRR584240   filt  fastq     gz  viral  masked  tsv    gz  None  None  None  None
+#8868847    SRR584240   filt  fastq     gz  viral  masked  tsv    gz  None  None  None  None
+#8868848    SRR584240   filt  fastq     gz  viral  masked  tsv    gz  None  None  None  None
+#8868849    SRR584240   filt  fastq     gz  viral  masked  tsv    gz  None  None  None  None
+#8868850    SRR584240   filt  fastq     gz  viral  masked  tsv    gz  None  None  None  None
+
+
+
+#df['source_format']=''
+#df['source_format'][df['file'].str.contains('fastq')] = 'fastq'
+#df['source_format'][df['file'].str.contains('bam')] = 'bam'
+#df['source_format'] = df.apply(lambda row: 'bam' if row['file'].str.contains('bam') else 'fastq')
+
+#	Would really like to do this in a one liner. Faster?
+
+#df.loc[df['file'].str.contains('fastq'), 'source_format'] = 'fastq'
+#df.loc[df['file'].str.contains('bam'), 'source_format'] = 'bam'
+
+df['source_format'] = df.file.apply(lambda f: 'bam' if 'bam.viral' in f else 'fastq')
+
+#df['elderly'] = np.where(df['age']>=50, 'yes', 'no')
+#df['color'] = np.where(df['Set']=='Z', 'green', 'red')
+
+
+
 
 os.chdir(startdir)
 
