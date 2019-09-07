@@ -5,12 +5,6 @@ import numpy as np
 import glob
 import os
 
-#def lane_or_dot(row):
-#	parts=row['qaccver'].split('/')
-#	if len(parts) > 1:
-#		return parts[-1]
-#	else:
-#		return '.'
 
 startdir = os.getcwd()
 
@@ -20,7 +14,8 @@ base="/Users/jakewendt/s3/viral-identification"
 
 os.chdir(base)
 
-for filepath in glob.iglob('**/*.viral.*.tsv.gz', recursive=True):
+#for filepath in glob.iglob('**/*.viral.*.tsv.gz', recursive=True):
+for filepath in glob.iglob('**/*.viral.masked.tsv.gz', recursive=True):
 	print(filepath)
 
 	f = pd.read_csv(filepath, header=None, sep="\t",
@@ -35,7 +30,7 @@ for filepath in glob.iglob('**/*.viral.*.tsv.gz', recursive=True):
 	f.insert( 1, 'source', filepath_pieces[0] )
 
 	# raw or masked ( ...viral.masked.tsv.gz )
-	f['reference'] = f.file.str.split('.',expand=True).iloc[:,-3]
+	#f['reference'] = f.file.str.split('.',expand=True).iloc[:,-3]
 
 	dfs.append(f)
 
