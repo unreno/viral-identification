@@ -399,9 +399,11 @@ Resources:
         Attempts: 1
       ContainerProperties:
         JobRoleArn: !GetAtt batchJobRole.Arn
-        Vcpus: 2
-        Memory: 3700
+        Vcpus: 1
+        Memory: 1800
         Image: !Join [ ".", [ !Ref "AWS::AccountId", "dkr.ecr", !Ref "AWS::Region", "amazonaws.com/viral_identification" ] ]
+        #Vcpus: 2
+        #Memory: 3700
 
   ipv4SGBaseIngress:
     DependsOn: batchVPC
