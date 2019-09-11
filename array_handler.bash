@@ -21,6 +21,8 @@ item=$(( ($page - 1) * $page_length + $AWS_BATCH_JOB_ARRAY_INDEX + 1 ))
 
 echo "item#:$item"
 
+list="${list}.urls"
+
 if [ -f ${list} ] ; then
 
 	echo "List file :${list}: found"
