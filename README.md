@@ -773,6 +773,188 @@ Approximately 30,000 hours of total processing time.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+#	20200302 UPDATE AND RUN
+
+Rather than align all reads, it has been decided that the unmapped bam file for each subject will be sufficient.
+I still believe that some viral content may be missed due to homology to human and the fact that the mapping was done "locally" allowing for the clipping of reads.
+In addition, we will be aligning with `diamond` to a protein reference which will slow down processing.
+These changes should speed up processing.
+The resulting files are larger as there are more alignments.
+
+I will need to create a new list and docker image.
+
+Enough talk.
+
+Changing to Diamond Protein aligner so ...
+
+```BASH
+rsync -avz --progress --include="viral.?.protein.faa.gz" --exclude="*" rsync://ftp.ncbi.nih.gov/refseq/release/viral/ ./
+
+wget https://github.com/bbuchfink/diamond/releases/download/v0.9.30/diamond-linux64.tar.gz
+
+zcat viral.?.protein.faa.gz > viral.protein.faa
+
+tar xfvz diamond-linux64.tar.gz 
+
+./diamond makedb --in viral.protein.faa --threads 40 --db viral
+
+tar cf - viral.dmnd | gzip > viral.dmnd.tar.gz
+
+docker build -t viral_identification .
+
+docker run --rm -it viral_identification
+```
+
+
+
+Test image
+```
+docker run --rm -it viral_identification
+
+aws s3 cp s3://1000genomes/phase3/data/HG00096/alignment/HG00096.unmapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam - | samtools fasta -N - | diamond blastx --threads 1 --outfmt 6 --db /diamond/viral | gzip | aws s3 cp - s3://viral-identification/1000genomes/phase3/data/HG00096/alignment/HG00096.unmapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam.diamond.csv.gz
+```
+
+```
+docker run --rm -it viral_identification viral_identification.bash s3://1000genomes/phase3/data/HG00096/alignment/HG00096.unmapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam
+```
+
+
+
+Upload this image and begin.
+```
+aws ecr create-repository --repository-name viral_identification
+
+aws ecr describe-repositories | jq -r '.repositories | map(select( .repositoryName == "viral_identification" ).repositoryUri )[]'
+
+ecr_repo=$( aws ecr describe-repositories | jq -r '.repositories | map(select( .repositoryName == "viral_identification" ).repositoryUri )[]' )
+
+aws ecr get-login --no-include-email --region us-east-1 | bash
+
+docker tag viral_identification:latest ${ecr_repo}:latest
+
+docker push ${ecr_repo}:latest
+
+
+private_key=$( aws ec2 create-key-pair --key-name batchKeyPair )
+
+echo $private_key | jq -r '.KeyMaterial' > ~/.ssh/batchKeyPair
+
+chmod 400 ~/.ssh/batchKeyPair
+
+
+aws cloudformation create-stack --template-body file://batch.template.yaml --stack-name batch --capabilities CAPABILITY_NAMED_IAM
+
+aws batch submit-job --job-name 1kg_un --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=2535 --container-overrides '{ "command": ["array_handler.bash","1000genomes.unmapped","1"], "memory": 8000 }'
+```
+
+
+Many failed out of memory. Only tested blast, not diamond. Diamond needs more memory. About 8GB.
+
+68 still fail ... Essential container in task exited ?
+
+```
+Status FAILED
+Status reason Essential container in task exited
+Container message
+
+... LOTS of DEBUG log messages, but I don't know what I'm looking for.
+
+2020-03-11 20:03:11,757 - ThreadPoolExecutor-0_3 - s3transfer.utils - DEBUG - Releasing acquire 0/189
+2020-03-11 20:03:11,757 - ThreadPoolExecutor-2_0 - s3transfer.tasks - DEBUG - CompleteDownloadNOOPTask(transfer_id=0, 
+{}
+) about to wait for the following futures []
+2020-03-11 20:03:11,757 - ThreadPoolExecutor-2_0 - s3transfer.tasks - DEBUG - CompleteDownloadNOOPTask(transfer_id=0, 
+{}
+) done waiting for dependent futures
+2020-03-11 20:03:11,757 - ThreadPoolExecutor-2_0 - s3transfer.utils - DEBUG - Releasing acquire 0/None
+download failed: s3://1000genomes/phase3/data/NA19982/alignment/NA19982.unmapped.ILLUMINA.bwa.ASW.low_coverage.20120522.bam to - ("Connection broken: ConnectionResetError(104, 'Connection reset by peer')", ConnectionResetError(104, 'Connection reset by peer'))
+2020-03-11 20:03:11,758 - Thread-1 - awscli.customizations.s3.results - DEBUG - Shutdown request received in result processing thread, shutting down result thread.
+[E::bgzf_read] Read block operation failed with error 4 after 0 of 4 bytes
+[bam2fq_mainloop] Failed to read bam record.
+```
+
+Can't set instanceType on individual jobs. m4/m5 seems to be more appropriate but this is happening so fast it seems irrelevant that I'm wasting cycles.
+
+Individual rerun test
+```
+aws batch submit-job --job-name HG00149 --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '{ "command": ["viral_identification.bash","s3://1000genomes/phase3/data/HG00149/alignment/HG00149.unmapped.ILLUMINA.bwa.GBR.low_coverage.20121211.bam"], "memory": 8000 }'
+```
+
+That worked. Rerun all.
+
+```
+aws s3 ls --recursive s3://viral-identification/1000genomes/phase3/data/ | grep Running | awk '{split($4,a,"/");sub(".Running","",$4);print "aws batch submit-job --job-name "a[4]" --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '"'"'{ \"command\": [\"viral_identification.bash\",\"s3://"$4"\"], \"vcpus\": 1, \"memory\": 8000 }'"'"'" }' | bash
+```
+
+I tried with a number of increases in memory. I reran and reran.
+Most runs successfully processed 1 or 2.
+Even tried it locally and it failed.
+This appears to be a docker memory error. Don't know why it is intermittant.
+Docker containers run with a max memory of 10G on AWS Batch, no matter how much is assigned to the instance!
+Running `lsblk` on a running instance shows 10G for each docker.
+```
+sudo lsblk
+253:3      0   10G  0 dm   /var/lib/docker/devicemapper/mnt/a676aef573abe7d5853ab1ebeaa0a
+```
+I can't find a way to adjust this. Also don't see why it would use so much memory.
+On my Mac, I upped the Memory to 16GB (my max) and ran locally again.
+
+```
+docker run --rm -it viral_identification viral_identification.bash s3://1000genomes/phase3/data/NA18910/alignment/NA18910.unmapped.ILLUMINA.bwa.YRI.low_coverage.20120522.bam
+docker run --rm -it viral_identification viral_identification.bash s3://1000genomes/phase3/data/NA18912/alignment/NA18912.unmapped.ILLUMINA.bwa.YRI.low_coverage.20120522.bam
+docker run --rm -it viral_identification viral_identification.bash s3://1000genomes/phase3/data/NA18988/alignment/NA18988.unmapped.ILLUMINA.bwa.JPT.low_coverage.20120522.bam
+```
+
+2 worked. 1 to go.
+
+
+
+
+
+
+
+
+Noticed that diamond has the option `--block-size` that can be used to control memory usage.
+
+Block size in billions of sequence letters to be processed at a time. This is the main parameter for controlling the program’s memory usage. Bigger numbers will increase the use of memory and temporary disk space, but also improve performance. The program can be expected to roughly use six times this number of memory (in GB). So for the default value of -b2.0, the memory usage will be about 12 GB.
+
+12 > 10, so perhaps this should be set to 1.5.
+
+```
+docker run --rm -it viral_identification viral_identification.bash s3://1000genomes/phase3/data/NA18912/alignment/NA18912.unmapped.ILLUMINA.bwa.YRI.low_coverage.20120522.bam
+```
+
+Finally. Added `--block-size 1.5` to the diamond call and completed successfully!
+
+
+
+
+
+
+
+
+Rebuilt cloud formation with the geuvadis bam file urls included and all ran successfully, surprisingly fast.
+```
+aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=462 --container-overrides '{ "command": ["array_handler.bash","geuvadis.bam","1"] }'
+```
+
+
+
+
+
+
+
 #	AWS Questions
 
 ##	What happens if spot instance going to be killed? how to react?

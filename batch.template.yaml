@@ -327,6 +327,8 @@ Resources:
         SpotIamFleetRole: !GetAtt spotFleetRole.Arn
         MinvCpus: 0
         MaxvCpus: 512
+        # I'm expect the source of geuvadis files to limit access. No problems with 40.
+        #MaxvCpus: 40
         DesiredvCpus: 0
         SecurityGroupIds:
           - !GetAtt batchVPC.DefaultSecurityGroup
@@ -347,7 +349,9 @@ Resources:
         # The PROFILE arn is needed here. Not the role arn. Not the role name.
         InstanceRole: !GetAtt ecsInstanceProfile.Arn
         InstanceTypes:
-          - c5
+          - optimal
+#          - m5
+#          - c5
 
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-computeenvironment-computeresources.html#cfn-batch-computeenvironment-computeresources-instancerole
 # The Amazon ECS instance profile applied to Amazon EC2 instances in a compute environment. You can specify the short name or full Amazon Resource Name (ARN) of an instance profile. For example, ecsInstanceRole or arn:aws:iam::<aws_account_id>:instance-profile/ecsInstanceRole . For more information, see Amazon ECS Instance Role in the AWS Batch User Guide.
@@ -389,6 +393,7 @@ Resources:
   # They are just "deregistered" and "versioned".
   # Creating, deleting and creating will result in a second revision.
   # I'm a bit OCD, so this bugs the hell outta me for no practical reason.
+  # 1800 works for some Unmapped/Diamond calls, but not most. Doubling and rebuilding.
   batchJobDefinition:
     DependsOn: batchJobRole
     Type: AWS::Batch::JobDefinition
@@ -400,8 +405,9 @@ Resources:
       ContainerProperties:
         JobRoleArn: !GetAtt batchJobRole.Arn
         Vcpus: 1
-        Memory: 1800
+        Memory: 10000
         Image: !Join [ ".", [ !Ref "AWS::AccountId", "dkr.ecr", !Ref "AWS::Region", "amazonaws.com/viral_identification" ] ]
+        #Memory: 1800
         #Vcpus: 2
         #Memory: 3700
 
