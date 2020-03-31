@@ -123,18 +123,27 @@ echo "Piping infile through several utilities and then blastn to outfile"
 
 #	sadly, diamond will not output daa files (outfmt 100) to STDOUT??
 
-eval ${fasta_input_stream} | \
-	diamond blastx --block-size 1.5 --threads 1 --outfmt 6 --db $DIAMOND/viral | gzip --best | 
-		aws s3 cp - ${outbase_dir}/${outbase_file}.diamond.viral.csv.gz;
+#eval ${fasta_input_stream} | \
+#	diamond blastx --block-size 1.5 --threads 1 --outfmt 6 --db $DIAMOND/viral | gzip | 
+#		aws s3 cp - ${outbase_dir}/${outbase_file}.diamond.viral.csv.gz;
 
 
 #	blastn only takes fasta (no fastq, no gzipped, no sam or bam or cram)
-#eval ${fasta_input_stream} | \
-#	blastn -num_threads 1 -outfmt 6 -db viral.masked | gzip --best | \
-#		aws s3 cp - ${outbase_dir}/${outbase_file}.viral.masked.tsv.gz;
 #
+#	blastn's default evalue is 10
+#	diamond's is 0.001
+#	Setting's blastn's to 0.001
 #
-#	
+eval ${fasta_input_stream} | \
+	blastn -evalue 0.001 -num_threads 1 -outfmt 6 -db viral.masked | gzip | \
+		aws s3 cp - ${outbase_dir}/${outbase_file}.blastn.viral.masked.csv.gz;
+
+
+
+
+
+
+
 #	eval ${fasta_input_stream} | tee \
 #		>( blastn -num_threads 1 -outfmt 6 -db viral.masked | gzip --best | \
 #			aws s3 cp - ${outbase_dir}/${outbase_file}.viral.masked.tsv.gz;

@@ -918,13 +918,6 @@ docker run --rm -it viral_identification viral_identification.bash s3://1000geno
 
 2 worked. 1 to go.
 
-
-
-
-
-
-
-
 Noticed that diamond has the option `--block-size` that can be used to control memory usage.
 
 Block size in billions of sequence letters to be processed at a time. This is the main parameter for controlling the program’s memory usage. Bigger numbers will increase the use of memory and temporary disk space, but also improve performance. The program can be expected to roughly use six times this number of memory (in GB). So for the default value of -b2.0, the memory usage will be about 12 GB.
@@ -937,7 +930,75 @@ docker run --rm -it viral_identification viral_identification.bash s3://1000geno
 
 Finally. Added `--block-size 1.5` to the diamond call and completed successfully!
 
+Rebuilt cloud formation with the geuvadis bam file urls included and all ran successfully, surprisingly fast.
+```
+aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=462 --container-overrides '{ "command": ["array_handler.bash","geuvadis.bam","1"] }'
+```
 
+
+
+
+
+
+
+
+
+#	20200330 UPDATE AND RUN
+
+
+Ok. Gonna run blastn/viral.masked on the unmapped reads.
+
+
+```BASH
+docker build -t viral_identification .
+
+docker run --rm -it viral_identification
+
+docker run --rm -it viral_identification viral_identification.bash s3://1000genomes/phase3/data/HG00096/alignment/HG00096.unmapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam
+
+
+aws ecr create-repository --repository-name viral_identification
+
+aws ecr describe-repositories | jq -r '.repositories | map(select( .repositoryName == "viral_identification" ).repositoryUri )[]'
+
+ecr_repo=$( aws ecr describe-repositories | jq -r '.repositories | map(select( .repositoryName == "viral_identification" ).repositoryUri )[]' )
+
+aws ecr get-login --no-include-email --region us-east-1 | bash
+
+docker tag viral_identification:latest ${ecr_repo}:latest
+
+docker push ${ecr_repo}:latest
+
+
+aws cloudformation create-stack --template-body file://batch.template.yaml --stack-name batch --capabilities CAPABILITY_NAMED_IAM
+
+aws batch submit-job --job-name 1kg_un --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=2535 --container-overrides '{ "command": ["array_handler.bash","1000genomes.unmapped","1"] }'
+```
+
+
+
+
+
+17 failed. Not clear why.
+Rerunning.
+```
+aws s3 ls --recursive s3://viral-identification/1000genomes/phase3/data/ | grep Running | awk '{split($4,a,"/");sub(".Running","",$4);print "aws batch submit-job --job-name "a[4]" --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '"'"'{ \"command\": [\"viral_identification.bash\",\"s3://"$4"\"] }'"'"'" }' | bash
+```
+
+All failed again? Still not clear why. Nothing in the log file.
+Status reason  Host EC2 (instance i-05e3009164580f431) terminated.
+Did the SPOT instance crash? Seems odd that a rerun would also fail the same way.
+Rerunning with more memory.
+
+```
+aws s3 ls --recursive s3://viral-identification/1000genomes/phase3/data/ | grep Running | awk '{split($4,a,"/");sub(".Running","",$4);print "aws batch submit-job --job-name "a[4]" --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '"'"'{ \"command\": [\"viral_identification.bash\",\"s3://"$4"\"], \"memory\": 16000 }'"'"'" }' | bash
+```
+Only NA19901 failed. Rerunning it with even more memory.
+Still not clear why they failed.
+
+```
+aws s3 ls --recursive s3://viral-identification/1000genomes/phase3/data/ | grep Running | awk '{split($4,a,"/");sub(".Running","",$4);print "aws batch submit-job --job-name "a[4]" --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '"'"'{ \"command\": [\"viral_identification.bash\",\"s3://"$4"\"], \"memory\": 24000 }'"'"'" }' | bash
+```
 
 
 
@@ -948,6 +1009,11 @@ Rebuilt cloud formation with the geuvadis bam file urls included and all ran suc
 ```
 aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=462 --container-overrides '{ "command": ["array_handler.bash","geuvadis.bam","1"] }'
 ```
+
+
+
+
+
 
 
 

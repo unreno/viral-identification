@@ -37,24 +37,23 @@ RUN cd / \
 
 
 
-#	
-#	RUN cd / \
-#		&& wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.9.0/ncbi-blast-2.9.0+-x64-linux.tar.gz \
-#		&& tar xvfz ncbi-blast-2.9.0+-x64-linux.tar.gz \
-#		&& mv ncbi-blast-2.9.0+/bin/* /usr/local/bin/ \
-#		&& /bin/rm -rf ncbi-blast-2.9.0+-x64-linux.tar.gz ncbi-blast-2.9.0+ 
-#	
-#	ENV BLASTDB=/blastdb
-#	
-#	#	ADD will actually untar and gunzip for you.
-#	ADD references/viral.masked.tar.gz /blastdb/
-#	ADD references/viral.raw.tar.gz /blastdb/
+
+RUN cd / \
+	&& wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.9.0/ncbi-blast-2.9.0+-x64-linux.tar.gz \
+	&& tar xvfz ncbi-blast-2.9.0+-x64-linux.tar.gz \
+	&& mv ncbi-blast-2.9.0+/bin/* /usr/local/bin/ \
+	&& /bin/rm -rf ncbi-blast-2.9.0+-x64-linux.tar.gz ncbi-blast-2.9.0+ 
+
+ENV BLASTDB=/blastdb
+
+#	ADD will actually untar and gunzip for you.
+ADD references/viral.masked.tar.gz /blastdb/
+ADD references/viral.raw.tar.gz /blastdb/
+
 #	
 #	USING DIAMOND INSTEAD OF BLASTN
+#	Actually, gonna run BLASTN now too.
 #
-
-
-
 
 RUN cd / \
 	&& wget https://github.com/bbuchfink/diamond/releases/download/v0.9.30/diamond-linux64.tar.gz \
