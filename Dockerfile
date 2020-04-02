@@ -90,6 +90,9 @@ ADD urls/geuvadis.bam.urls /tmp/
 #	RUN aws s3 cp --no-sign-request s3://1000genomes/alignment.index - | grep ".unmapped.ILLUMINA." | grep ".low_coverage." | awk '{print "s3://1000genomes/phase3/"$1}' > 1000genomes.unmapped.urls
 ADD urls/1000genomes.unmapped.urls /tmp/
 
+
+ADD urls/my.geuvadis.bam.urls /tmp/
+
 #wc -l *.urls
 # 108873 1000genomes.urls
 #    924 geuvadis.urls

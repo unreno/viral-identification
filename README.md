@@ -1005,11 +1005,26 @@ aws s3 ls --recursive s3://viral-identification/1000genomes/phase3/data/ | grep 
 
 
 
-Rebuilt cloud formation with the geuvadis bam file urls included and all ran successfully, surprisingly fast.
+Rebuilt cloud formation with the geuvadis bam file urls included
+This didn't work this time. Their server keeps cutting off the files.
+
 ```
-aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=462 --container-overrides '{ "command": ["array_handler.bash","geuvadis.bam","1"] }'
+aws cloudformation delete-stack --stack-name batch
+
+aws cloudformation create-stack --template-body file://batch.template.yaml --stack-name batch --capabilities CAPABILITY_NAMED_IAM
+
+aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=462 --container-overrides '{ "command": ["array_handler.bash","geuvadis.bam","1"], "memory": 15000 }'
 ```
 
+Gonna upload my copy to my bucket and rebuild Docker image with list to my data.
+
+```
+aws cloudformation delete-stack --stack-name batch
+
+aws cloudformation create-stack --template-body file://batch.template.yaml --stack-name batch --capabilities CAPABILITY_NAMED_IAM
+
+aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=462 --container-overrides '{ "command": ["array_handler.bash","my.geuvadis.bam","1"], "memory": 15000 }'
+```
 
 
 
