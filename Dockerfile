@@ -1,5 +1,5 @@
 FROM amazonlinux:latest
-RUN yum -y install which unzip aws-cli tar gzip bzip2 gcc g++ zlib-devel bzip2-devel xz-devel make libcurl-devel ncurses-devel openssl-devel wget procps htop python3 boto3
+RUN yum -y install which unzip aws-cli tar gzip bzip2 gcc g++ zlib-devel bzip2-devel xz-devel make libcurl-devel ncurses-devel openssl-devel wget procps htop python3 boto3 perl
 
 RUN rm -f /usr/bin/python
 RUN ln -s /usr/bin/python3 /usr/bin/python
@@ -68,6 +68,29 @@ ENV DIAMOND=/diamond
 ADD references/viral.dmnd.tar.gz /diamond/
 
 
+
+
+
+
+
+RUN cd / \
+	&& wget https://github.com/BenLangmead/bowtie2/releases/download/v2.4.1/bowtie2-2.4.1-linux-x86_64.zip \
+	&& unzip bowtie2-2.4.1-linux-x86_64.zip \
+	&& mv bowtie2-2.4.1-linux-x86_64/bowtie2* /usr/local/bin/ \
+	&& /bin/rm -rf bowtie2-2.4.1-linux-x86_64.zip
+
+ENV BOWTIE2_INDEXES=/bowtie2
+
+#	ADD will actually untar and gunzip for you.
+#	doesn't seem to gunzip
+ADD references/hg38.bt2.tar.gz /bowtie2/
+
+#	This reference is large and creates a large image
+#	which takes quite a while to upload.
+#	Should probably build on an AWS EC2 instance and upload from there.
+#	aws s3 --no-sign-request --region eu-west-1 sync s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/Bowtie2Index/ ./
+#	rename genome hg38 genome*bt2
+#	rm genome.fa
 
 
 

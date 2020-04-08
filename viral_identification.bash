@@ -134,10 +134,17 @@ echo "Piping infile through several utilities and then blastn to outfile"
 #	diamond's is 0.001
 #	Setting's blastn's to 0.001
 #
-eval ${fasta_input_stream} | \
-	blastn -evalue 0.001 -num_threads 1 -outfmt 6 -db viral.masked | gzip | \
-		aws s3 cp - ${outbase_dir}/${outbase_file}.blastn.viral.masked.csv.gz;
+#eval ${fasta_input_stream} | \
+#	blastn -evalue 0.001 -num_threads 1 -outfmt 6 -db viral.masked | gzip | \
+#		aws s3 cp - ${outbase_dir}/${outbase_file}.blastn.viral.masked.csv.gz;
 
+#	We found that up to 50% of these unmapped read will map to hg38 with bowtie2.
+#	This is unfortunate, so I will try to add a hg38 alignment to the mix.
+#	Be sure to use different output filename
+
+bowtie2 -f -U <( eval ${fasta_input_stream} ) -x hg38 --very-sensitive | samtools fasta -f 4 - | \
+	blastn -evalue 0.001 -num_threads 1 -outfmt 6 -db viral.masked | gzip | \
+		aws s3 cp - ${outbase_dir}/${outbase_file}.unmapped.blastn.viral.masked.csv.gz;
 
 
 
