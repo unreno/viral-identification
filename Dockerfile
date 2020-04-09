@@ -130,7 +130,7 @@ ADD urls/my.geuvadis.bam.urls /tmp/
 #	DO THIS ONLY FOR LOCAL TESTING
 #	tar xfvz aws.tar.gz
 #	chmod 666 .aws/c*
-COPY .aws /.aws/
+#COPY .aws /.aws/
 
 
 

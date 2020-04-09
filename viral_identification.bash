@@ -181,9 +181,17 @@ sample=${outbase_file%%.*}
 for index in /bowtie2/NC_00*.rev.2.bt2 ; do
 	date
 	index=$( basename ${index} .rev.2.bt2 )
+	bowtie2 --xeq -x ${index} --very-sensitive --no-unal \
+		--rg-id ${sample}.e2e --rg "SM:${sample}" \
+		-f -U <( aws s3 cp ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.fasta.gz - ) \
+		| samtools sort - \
+		| aws s3 cp - ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.bowtie2-e2e.${index}.bam
+	aws s3 cp ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.bowtie2-e2e.${index}.bam - \
+		| samtools view -c - \
+		| aws s3 cp - ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.bowtie2-e2e.${index}.bam.read_count.txt
 	bowtie2 --xeq -x ${index} --very-sensitive-local --no-unal \
 		--rg-id ${sample}.loc --rg "SM:${sample}" \
-		-U <( aws s3 cp ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.fasta.gz - ) \
+		-f -U <( aws s3 cp ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.fasta.gz - ) \
 		| samtools sort - \
 		| aws s3 cp - ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.bowtie2-loc.${index}.bam
 	aws s3 cp ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.bowtie2-loc.${index}.bam - \
