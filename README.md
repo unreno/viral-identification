@@ -1033,6 +1033,101 @@ aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queu
 
 
 
+#	20200409 UPDATE AND RUN AGAIN
+
+Found that many of the reads in the unmapped bam files actually align to hg38. This is likely muddying up the analysis downstream so gonna align unmapped to hg38 and then extract unmapped and then run blastn/viral.masked on those reads. Will need to count the unmapped reads here so can normalize.
+
+
+```BASH
+docker build -t viral_identification .
+
+docker run --rm -it viral_identification
+
+docker run --rm -it viral_identification viral_identification.bash s3://1000genomes/phase3/data/HG00096/alignment/HG00096.unmapped.ILLUMINA.bwa.GBR.low_coverage.20120522.bam
+
+
+
+aws ecr create-repository --repository-name viral_identification
+
+aws ecr describe-repositories | jq -r '.repositories | map(select( .repositoryName == "viral_identification" ).repositoryUri )[]'
+
+ecr_repo=$( aws ecr describe-repositories | jq -r '.repositories | map(select( .repositoryName == "viral_identification" ).repositoryUri )[]' )
+
+aws ecr get-login --no-include-email --region us-east-1 | bash
+
+docker tag viral_identification:latest ${ecr_repo}:latest
+
+docker push ${ecr_repo}:latest
+
+
+aws cloudformation create-stack --template-body file://batch.template.yaml --stack-name batch --capabilities CAPABILITY_NAMED_IAM
+
+aws batch submit-job --job-name 1kg_un --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=2535 --container-overrides '{ "command": ["array_handler.bash","1000genomes.unmapped","1"] }'
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+#	17 failed. Not clear why.
+#	Rerunning.
+#	```
+#	aws s3 ls --recursive s3://viral-identification/1000genomes/phase3/data/ | grep Running | awk '{split($4,a,"/");sub(".Running","",$4);print "aws batch submit-job --job-name "a[4]" --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '"'"'{ \"command\": [\"viral_identification.bash\",\"s3://"$4"\"] }'"'"'" }' | bash
+#	```
+#	
+#	All failed again? Still not clear why. Nothing in the log file.
+#	Status reason  Host EC2 (instance i-05e3009164580f431) terminated.
+#	Did the SPOT instance crash? Seems odd that a rerun would also fail the same way.
+#	Rerunning with more memory.
+#	
+#	```
+#	aws s3 ls --recursive s3://viral-identification/1000genomes/phase3/data/ | grep Running | awk '{split($4,a,"/");sub(".Running","",$4);print "aws batch submit-job --job-name "a[4]" --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '"'"'{ \"command\": [\"viral_identification.bash\",\"s3://"$4"\"], \"memory\": 16000 }'"'"'" }' | bash
+#	```
+#	Only NA19901 failed. Rerunning it with even more memory.
+#	Still not clear why they failed.
+#	
+#	```
+#	aws s3 ls --recursive s3://viral-identification/1000genomes/phase3/data/ | grep Running | awk '{split($4,a,"/");sub(".Running","",$4);print "aws batch submit-job --job-name "a[4]" --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '"'"'{ \"command\": [\"viral_identification.bash\",\"s3://"$4"\"], \"memory\": 24000 }'"'"'" }' | bash
+#	```
+#	
+#	Rebuilt cloud formation with the geuvadis bam file urls included
+#	This didn't work this time. Their server keeps cutting off the files.
+#	
+#	```
+#	aws cloudformation delete-stack --stack-name batch
+#	
+#	aws cloudformation create-stack --template-body file://batch.template.yaml --stack-name batch --capabilities CAPABILITY_NAMED_IAM
+#	
+#	aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=462 --container-overrides '{ "command": ["array_handler.bash","geuvadis.bam","1"], "memory": 15000 }'
+#	```
+#	
+#	Gonna upload my copy to my bucket and rebuild Docker image with list to my data.
+#	
+#	```
+#	aws cloudformation delete-stack --stack-name batch
+#	
+#	aws cloudformation create-stack --template-body file://batch.template.yaml --stack-name batch --capabilities CAPABILITY_NAMED_IAM
+#	
+#	aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=462 --container-overrides '{ "command": ["array_handler.bash","my.geuvadis.bam","1"], "memory": 15000 }'
+#	```
+
+
+
+
+
+
+
+
+
+
 
 
 

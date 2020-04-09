@@ -127,7 +127,6 @@ echo "Piping infile through several utilities and then blastn to outfile"
 #	diamond blastx --block-size 1.5 --threads 1 --outfmt 6 --db $DIAMOND/viral | gzip | 
 #		aws s3 cp - ${outbase_dir}/${outbase_file}.diamond.viral.csv.gz;
 
-
 #	blastn only takes fasta (no fastq, no gzipped, no sam or bam or cram)
 #
 #	blastn's default evalue is 10
@@ -142,12 +141,55 @@ echo "Piping infile through several utilities and then blastn to outfile"
 #	This is unfortunate, so I will try to add a hg38 alignment to the mix.
 #	Be sure to use different output filename
 
-bowtie2 -f -U <( eval ${fasta_input_stream} ) -x hg38 --very-sensitive | samtools fasta -f 4 - | \
-	blastn -evalue 0.001 -num_threads 1 -outfmt 6 -db viral.masked | gzip | \
-		aws s3 cp - ${outbase_dir}/${outbase_file}.unmapped.blastn.viral.masked.csv.gz;
+#bowtie2 -f -U <( eval ${fasta_input_stream} ) -x hg38 --very-sensitive \
+#	| samtools fasta -f 4 - | \
+#	blastn -evalue 0.001 -num_threads 1 -outfmt 6 -db viral.masked | gzip | \
+#		aws s3 cp - ${outbase_dir}/${outbase_file}.unmapped.blastn.viral.masked.csv.gz;
+
+#	Will need the numbers to normalize later.
+#	No reason I can't do multiple steps in this script.
 
 
+#	hg38 reference is kinda too large to include in docker image.
+#	So, copy in the hg38 reference
 
+#	date
+
+#	it appears that these Batch instances somehow share the Docker instance and this causes a collision
+#	when run on multiple instances.
+#	Try again to include in docker image
+#aws s3 sync --no-sign-request --exclude \*fa s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/Bowtie2Index/ /bowtie2/
+#rename genome hg38 /bowtie2/genome.*.bt2
+
+
+date
+bowtie2 --xeq -f -U <( eval ${fasta_input_stream} ) -x hg38 --very-sensitive \
+	| samtools fasta -f 4 - | gzip \
+	| aws s3 cp - ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.fasta.gz
+
+date
+blastn -query <( aws s3 cp ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.fasta.gz - | zcat ) \
+	-evalue 0.001 -outfmt 6 -db viral.masked | gzip \
+	| aws s3 cp - ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.blastn.viral.masked.csv.gz
+
+date
+aws s3 cp ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.fasta.gz - | zcat | paste - - | wc -l \
+	| aws s3 cp - ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.fasta.gz.read_count.txt
+
+sample=${outbase_file%%.*}
+
+for index in /bowtie2/NC_00*.rev.2.bt2 ; do
+	date
+	index=$( basename ${index} .rev.2.bt2 )
+	bowtie2 --xeq -x ${index} --very-sensitive-local --no-unal \
+		--rg-id ${sample}.loc --rg "SM:${sample}" \
+		-U <( aws s3 cp ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.fasta.gz - ) \
+		| samtools sort - \
+		| aws s3 cp - ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.bowtie2-loc.${index}.bam
+	aws s3 cp ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.bowtie2-loc.${index}.bam - \
+		| samtools view -c - \
+		| aws s3 cp - ${outbase_dir}/${outbase_file}.bowtie2-e2e.hg38.unmapped.bowtie2-loc.${index}.bam.read_count.txt
+done
 
 
 

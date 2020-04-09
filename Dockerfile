@@ -77,12 +77,14 @@ RUN cd / \
 	&& wget https://github.com/BenLangmead/bowtie2/releases/download/v2.4.1/bowtie2-2.4.1-linux-x86_64.zip \
 	&& unzip bowtie2-2.4.1-linux-x86_64.zip \
 	&& mv bowtie2-2.4.1-linux-x86_64/bowtie2* /usr/local/bin/ \
-	&& /bin/rm -rf bowtie2-2.4.1-linux-x86_64.zip
+	&& /bin/rm -rf bowtie2-2.4.1-linux-x86_64.zip bowtie2-2.4.1-linux-x86_64
 
 ENV BOWTIE2_INDEXES=/bowtie2
+RUN mkdir /bowtie2 && chmod a+w /bowtie2
 
 #	ADD will actually untar and gunzip for you.
 #	doesn't seem to gunzip
+ADD references/herpes.bt2.tar.gz /bowtie2/
 ADD references/hg38.bt2.tar.gz /bowtie2/
 
 #	This reference is large and creates a large image
@@ -92,6 +94,7 @@ ADD references/hg38.bt2.tar.gz /bowtie2/
 #	rename genome hg38 genome*bt2
 #	rm genome.fa
 
+#	aws s3 sync --no-sign-request --exclude \*fa --dryrun s3://ngi-igenomes/igenomes/Homo_sapiens/UCSC/hg38/Sequence/Bowtie2Index/ /bowtie2/
 
 
 
@@ -127,7 +130,7 @@ ADD urls/my.geuvadis.bam.urls /tmp/
 #	DO THIS ONLY FOR LOCAL TESTING
 #	tar xfvz aws.tar.gz
 #	chmod 666 .aws/c*
-#COPY .aws /.aws/
+COPY .aws /.aws/
 
 
 
