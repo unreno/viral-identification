@@ -326,7 +326,12 @@ Resources:
         #BidPercentage: 25
         SpotIamFleetRole: !GetAtt spotFleetRole.Arn
         MinvCpus: 0
-        MaxvCpus: 512
+        #	This is an actual limit
+        #	8x r4.16xlarge (64) = 512	
+        # It is editable, but seems to have no impact on running queues
+        # I stand corrected. About 10 minutes after increasing, more instances started. Yay!
+        #MaxvCpus: 512
+        MaxvCpus: 1024
         # I'm expecting the source of geuvadis files to limit access. No problems with 40.
         #MaxvCpus: 40
         DesiredvCpus: 0
