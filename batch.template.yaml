@@ -410,9 +410,10 @@ Resources:
       ContainerProperties:
         JobRoleArn: !GetAtt batchJobRole.Arn
         Image: !Join [ ".", [ !Ref "AWS::AccountId", "dkr.ecr", !Ref "AWS::Region", "amazonaws.com/viral_identification" ] ]
-        Vcpus: 2
-        Memory: 30000
-        #Vcpus: 1
+        Vcpus: 1
+        Memory: 20000
+        #Vcpus: 2
+        #Memory: 30000
         #Memory: 15000
         #Memory: 1800
         #Vcpus: 2

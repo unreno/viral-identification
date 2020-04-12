@@ -1066,6 +1066,22 @@ aws batch submit-job --job-name 1kg_un --job-definition myJobDefinition --job-qu
 ```
 
 
+A number of SPOT instances were reset and some jobs were running long and canceled.
+
+Rerunning 211.
+```
+aws s3 ls --recursive s3://viral-identification/1000genomes/phase3/data/ | grep Running | awk '{split($4,a,"/");sub(".Running","",$4);print "aws batch submit-job --job-name "a[4]" --job-definition myJobDefinition --job-queue myJobQueue --container-overrides '"'"'{ \"command\": [\"viral_identification.bash\",\"s3://"$4"\"] }'"'"'" }' | bash
+```
+
+SPOT instances are so flaky! Gonna need to rerun a handful due to terminations.
+
+Downed from 2/30000 to 1/20000 because I think that it was excessive.
+We shall see.
+
+```
+aws batch submit-job --job-name geuv --job-definition myJobDefinition --job-queue myJobQueue --array-properties size=462 --container-overrides '{ "command": ["array_handler.bash","my.geuvadis.bam","1"], "memory": 15000 }'
+```
+
 
 
 
